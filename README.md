@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# Excel-to-PPT
-Export Test House Excel data and chart to PPT
-=======
 # Excel to PowerPoint Generator
 
 從 Excel 擷取圖表，自動貼到 PowerPoint 模板中。
@@ -10,18 +6,37 @@ Export Test House Excel data and chart to PPT
 
 ## 🚀 快速開始
 
-### 啟動程式
+### 方法一：使用啟動腳本（推薦）
+
+| 步驟 | 動作 |
+|------|------|
+| **首次使用** | 雙擊 `setup.bat` → 安裝依賴套件（只需執行一次） |
+| **啟動服務** | 雙擊 `start_server.bat` → 自動開啟瀏覽器 |
+| **停止服務** | 按 `Ctrl+C` 或關閉視窗，或雙擊 `stop_server.bat` |
+| **建立捷徑** | 雙擊 `create_shortcut.bat` → 桌面出現捷徑圖示 |
+
+### 方法二：手動啟動
 
 ```powershell
 cd C:\Users\alhung\excel-to-ppt
 .\venv\Scripts\Activate.ps1
-cd app
-python main.py
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ### 開啟網頁
 
 瀏覽器打開：**http://localhost:8000**
+
+---
+
+## 📁 檔案說明
+
+| 檔案 | 用途 |
+|------|------|
+| `start_server.bat` | 🚀 **主要啟動腳本** - 雙擊啟動服務 + 自動開瀏覽器 |
+| `stop_server.bat` | 🛑 停止服務 |
+| `setup.bat` | 🔧 首次安裝/重新安裝依賴套件 |
+| `create_shortcut.bat` | 📌 在桌面建立捷徑 |
 
 ---
 
@@ -89,12 +104,11 @@ python main.py
 ### Q: 伺服器無法啟動 (Port 8000 被佔用)
 
 ```powershell
-# 關閉佔用的程序
-Get-NetTCPConnection -LocalPort 8000 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+# 方法一：使用停止腳本
+雙擊 stop_server.bat
 
-# 重新啟動
-cd C:\Users\alhung\excel-to-ppt\app
-python main.py
+# 方法二：手動關閉
+Get-NetTCPConnection -LocalPort 8000 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 ```
 
 ### Q: 上傳後看不到圖表
@@ -109,6 +123,13 @@ python main.py
 - 左/上：調整圖片位置
 - 寬/高：調整圖片大小
 
+### Q: 套件安裝失敗
+
+```powershell
+# 重新執行安裝
+雙擊 setup.bat
+```
+
 ---
 
 ## 📁 專案結構
@@ -116,12 +137,18 @@ python main.py
 ```
 excel-to-ppt/
 ├── app/
-│   └── main.py              # 主程式
+│   ├── main.py                  # FastAPI 主程式
+│   ├── ppt_generator.py         # PPT 生成器
+│   └── excel_chart_extractor.py # Excel 圖表擷取
 ├── static/
-│   └── index.html           # 網頁介面
-├── uploads/                  # 上傳的檔案
-├── outputs/                  # 產生的 PPT
-├── venv/                     # Python 虛擬環境
+│   └── index.html               # 網頁介面
+├── uploads/                     # 上傳的檔案
+├── outputs/                     # 產生的 PPT
+├── venv/                        # Python 虛擬環境
+├── start_server.bat             # 啟動腳本
+├── stop_server.bat              # 停止腳本
+├── setup.bat                    # 安裝腳本
+├── create_shortcut.bat          # 建立桌面捷徑
 ├── requirements.txt
 └── README.md
 ```
@@ -132,11 +159,13 @@ excel-to-ppt/
 
 - Windows 作業系統
 - Microsoft Excel（已安裝）
-- Python 3.8+
+- Python 3.10+
 
 ---
 
-## 📝 首次安裝
+## 📝 手動安裝（進階）
+
+如果 `setup.bat` 無法使用，可手動安裝：
 
 ```powershell
 cd C:\Users\alhung\excel-to-ppt
@@ -144,4 +173,9 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
->>>>>>> da498fb (Initial commit: Excel to PPT Generator)
+
+---
+
+## 📄 License
+
+MIT License

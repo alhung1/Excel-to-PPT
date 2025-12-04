@@ -236,3 +236,4 @@ def extract_all_charts(excel_files: List[str], output_dir: str) -> Dict[str, Lis
     
     return results
 
+
