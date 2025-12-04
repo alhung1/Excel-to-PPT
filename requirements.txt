@@ -1,0 +1,17 @@
+# Excel to PowerPoint Generator
+# Web Framework
+fastapi
+uvicorn[standard]
+python-multipart
+
+# PowerPoint Generation
+python-pptx
+
+# Excel Reading (optional, for data extraction)
+openpyxl
+
+# Windows COM Automation (for chart capture)
+pywin32
+
+# Image Processing
+Pillow

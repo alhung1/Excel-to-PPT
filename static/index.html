@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel to PPT Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #475569;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 20px 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            background: var(--accent-blue);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+        .btn-primary { background: var(--accent-blue); color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: var(--accent-green); color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: var(--accent-red); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { 
+            background: var(--bg-tertiary); 
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            padding: 4px 8px;
+        }
+        .btn-ghost:hover { color: var(--text-primary); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 16px;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .upload-zone .icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .upload-zone .text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .upload-zone .hint {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 6px;
+        }
+
+        .upload-zone input[type="file"] {
+            display: none;
+        }
+
+        /* File List */
+        .file-list {
+            max-height: 150px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .file-item .icon { font-size: 1.1rem; }
+        .file-item .name { 
+            flex: 1; 
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-item .info {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Sheet List */
+        .sheet-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .sheet-group {
+            margin-bottom: 12px;
+        }
+
+        .sheet-group-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--accent-blue);
+        }
+
+        .sheet-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+            font-size: 0.85rem;
+        }
+
+        .sheet-item:hover { border-color: var(--border-color); }
+        .sheet-item.selected { 
+            border-color: var(--accent-green); 
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .sheet-item .name { flex: 1; }
+        .sheet-item .type {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+        }
+        .sheet-item .type.chartsheet {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent-purple);
+        }
+
+        .sheet-item .page-input {
+            width: 45px;
+            padding: 4px 6px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        /* PPT Section */
+        .ppt-info {
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .ppt-info.show { display: block; }
+
+        .ppt-info .filename {
+            color: var(--accent-green);
+            font-weight: 500;
+        }
+
+        .slide-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .slide-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+
+        .slide-item .page-num {
+            background: var(--accent-blue);
+            color: white;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .slide-item .title {
+            flex: 1;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Mapping Section */
+        .mapping-section { grid-column: span 3; }
+
+        .mapping-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .mapping-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .mapping-item .info { flex: 1; min-width: 0; }
+        .mapping-item .chart-name {
+            font-weight: 500;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mapping-item .excel-name {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        .mapping-item .arrow { color: var(--accent-green); }
+        .mapping-item .page-badge {
+            background: var(--accent-blue);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        /* Settings */
+        .settings-row {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .setting-item label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .setting-item input {
+            width: 65px;
+            padding: 5px 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Generate Section */
+        .generate-section {
+            grid-column: span 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 20px;
+            flex-wrap: wrap;
+        }
+
+        .output-input {
+            padding: 10px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            width: 280px;
+        }
+
+        .generate-btn {
+            padding: 12px 36px;
+            font-size: 1rem;
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Result */
+        .result-section {
+            display: none;
+            grid-column: span 3;
+            text-align: center;
+            padding: 40px;
+        }
+        .result-section.show { display: block; }
+        .result-icon { font-size: 56px; margin-bottom: 12px; }
+        .result-title { font-size: 1.4rem; color: var(--accent-green); margin-bottom: 16px; }
+        .download-btn { padding: 12px 36px; font-size: 1rem; text-decoration: none; }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 25px;
+            color: var(--text-muted);
+        }
+        .empty-state .icon { font-size: 32px; margin-bottom: 10px; }
+
+        /* Status */
+        .status-bar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+        }
+        .status-bar.show { display: flex; }
+        .status-bar .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent-orange);
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-overlay.show { display: flex; }
+        .loading-box {
+            background: var(--bg-secondary);
+            padding: 30px 50px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-tertiary); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <div id="loadingText">處理中...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <h1>📊 Excel → PPT Generator</h1>
+            <p style="color: var(--text-secondary);">上傳 Excel 和 PPT 檔案，自動產生報告</p>
+        </header>
+
+        <div class="main-layout">
+            <!-- Excel Upload -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        📁 Excel 檔案
+                        <span class="badge" id="excelCount">0</span>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="clearAllExcel()">清除</button>
+                </div>
+
+                <div class="upload-zone" id="excelDropZone">
+                    <div class="icon">📤</div>
+                    <div class="text">拖曳 Excel 檔案到這裡</div>
+                    <div class="hint">或點擊選擇檔案 (.xlsx, .xlsm)</div>
+                    <input type="file" id="excelFileInput" accept=".xlsx,.xlsm,.xls" multiple>
+                </div>
+
+                <div class="file-list" id="excelFilesList"></div>
+
+                <div class="sheet-list" id="sheetList">
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <p>上傳 Excel 後顯示可選項目</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PPT Upload -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📄 PPT 模板</div>
+                    <button class="btn btn-sm btn-secondary" onclick="clearPPT()">更換</button>
+                </div>
+
+                <div class="upload-zone" id="pptDropZone">
+                    <div class="icon">📤</div>
+                    <div class="text">拖曳 PPT 檔案到這裡</div>
+                    <div class="hint">或點擊選擇檔案 (.pptx)</div>
+                    <input type="file" id="pptFileInput" accept=".pptx,.ppt">
+                </div>
+
+                <div class="ppt-info" id="pptInfo">
+                    <span class="filename" id="pptFilename"></span>
+                    <span style="color: var(--text-muted); margin-left: 10px;" id="pptSlideCount"></span>
+                </div>
+
+                <div class="slide-list" id="slideList">
+                    <div class="empty-state">
+                        <div class="icon">📑</div>
+                        <p>上傳 PPT 查看頁面列表</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mappings -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        🔗 對應設定
+                        <span class="badge" id="mappingCount">0</span>
+                    </div>
+                    <button class="btn btn-sm btn-success" onclick="addSelectedMappings()">➕ 加入</button>
+                </div>
+
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px;">
+                    選擇左側項目 → 輸入頁碼 → 點「加入」
+                </p>
+
+                <div class="mapping-list" id="mappingList">
+                    <div class="empty-state" style="grid-column: span 2;">
+                        <div class="icon">🔗</div>
+                        <p>尚未設定對應</p>
+                    </div>
+                </div>
+
+                <div class="settings-row">
+                    <div class="setting-item">
+                        <label>左:</label>
+                        <input type="number" id="imgLeft" value="0.423" step="0.1">
+                    </div>
+                    <div class="setting-item">
+                        <label>上:</label>
+                        <input type="number" id="imgTop" value="1.1" step="0.1">
+                    </div>
+                    <div class="setting-item">
+                        <label>寬:</label>
+                        <input type="number" id="imgWidth" value="12.0" step="0.1">
+                    </div>
+                    <div class="setting-item">
+                        <label>高:</label>
+                        <input type="number" id="imgHeight" value="5.6" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate -->
+            <div class="card generate-section" id="generateSection">
+                <input type="text" class="output-input" id="outputName" value="Report_Generated" placeholder="輸出檔名">
+                <button class="btn btn-success generate-btn" onclick="generatePPT()" id="generateBtn" disabled>
+                    ⚡ 產生 PowerPoint
+                </button>
+            </div>
+
+            <!-- Result -->
+            <div class="card result-section" id="resultSection">
+                <div class="result-icon">🎉</div>
+                <div class="result-title">產生成功！</div>
+                <p id="resultInfo" style="color: var(--text-secondary); margin-bottom: 20px;"></p>
+                <a href="#" class="btn btn-success download-btn" id="downloadBtn">📥 下載 PowerPoint</a>
+                <button class="btn btn-secondary" style="margin-left: 10px;" onclick="resetForNew()">繼續製作</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let excelFiles = {};  // id -> {filename, worksheets, chartsheets, color}
+        let pptData = null;
+        let mappings = [];
+
+        const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
+        let colorIdx = 0;
+
+        // Excel upload zone
+        const excelDropZone = document.getElementById('excelDropZone');
+        const excelFileInput = document.getElementById('excelFileInput');
+
+        excelDropZone.addEventListener('click', () => excelFileInput.click());
+        excelDropZone.addEventListener('dragover', e => { e.preventDefault(); excelDropZone.classList.add('dragover'); });
+        excelDropZone.addEventListener('dragleave', () => excelDropZone.classList.remove('dragover'));
+        excelDropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            excelDropZone.classList.remove('dragover');
+            handleExcelFiles(e.dataTransfer.files);
+        });
+        excelFileInput.addEventListener('change', e => handleExcelFiles(e.target.files));
+
+        async function handleExcelFiles(files) {
+            for (const file of files) {
+                if (!file.name.match(/\.(xlsx|xlsm|xls)$/i)) continue;
+                await uploadExcel(file);
+            }
+        }
+
+        async function uploadExcel(file) {
+            showLoading('上傳 Excel: ' + file.name);
+            
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/upload-excel', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail);
+                }
+                const data = await res.json();
+                data.color = colors[colorIdx++ % colors.length];
+                excelFiles[data.file_id] = data;
+                
+                renderExcelFiles();
+                renderSheetList();
+                updateCounts();
+            } catch (e) {
+                alert('上傳失敗: ' + e.message);
+            }
+            
+            hideLoading();
+        }
+
+        function clearAllExcel() {
+            Object.keys(excelFiles).forEach(id => {
+                fetch(`/api/remove-file/${id}`, { method: 'DELETE' });
+            });
+            excelFiles = {};
+            mappings = [];
+            colorIdx = 0;
+            renderExcelFiles();
+            renderSheetList();
+            renderMappingList();
+            updateCounts();
+            updateGenerateBtn();
+        }
+
+        function renderExcelFiles() {
+            const container = document.getElementById('excelFilesList');
+            const ids = Object.keys(excelFiles);
+
+            if (ids.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = ids.map(id => {
+                const data = excelFiles[id];
+                const total = data.worksheets.length + data.chartsheets.length;
+                return `
+                    <div class="file-item" style="border-left-color: ${data.color}">
+                        <span class="icon">📊</span>
+                        <span class="name">${data.filename}</span>
+                        <span class="info">${total} 項</span>
+                        <button class="btn btn-ghost" onclick="removeExcel('${id}')">✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function removeExcel(id) {
+            fetch(`/api/remove-file/${id}`, { method: 'DELETE' });
+            delete excelFiles[id];
+            mappings = mappings.filter(m => m.excel_id !== id);
+            renderExcelFiles();
+            renderSheetList();
+            renderMappingList();
+            updateCounts();
+            updateGenerateBtn();
+        }
+
+        function renderSheetList() {
+            const container = document.getElementById('sheetList');
+            const ids = Object.keys(excelFiles);
+
+            if (ids.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>上傳 Excel 後顯示可選項目</p></div>';
+                return;
+            }
+
+            let html = '';
+            ids.forEach(id => {
+                const data = excelFiles[id];
+                html += `<div class="sheet-group">
+                    <div class="sheet-group-header" style="background: ${data.color}22; color: ${data.color}">
+                        📊 ${data.filename}
+                    </div>`;
+
+                data.worksheets.forEach(ws => {
+                    html += `
+                        <div class="sheet-item" data-id="${id}" data-name="${ws.name}" data-type="worksheet">
+                            <span class="name">${ws.name}</span>
+                            <span class="type">sheet</span>
+                            <input type="number" class="page-input" placeholder="頁" min="1" onclick="event.stopPropagation()">
+                        </div>`;
+                });
+
+                data.chartsheets.forEach(cs => {
+                    html += `
+                        <div class="sheet-item" data-id="${id}" data-name="${cs.name}" data-type="chartsheet">
+                            <span class="name">${cs.name}</span>
+                            <span class="type chartsheet">chart</span>
+                            <input type="number" class="page-input" placeholder="頁" min="1" onclick="event.stopPropagation()">
+                        </div>`;
+                });
+
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+            container.querySelectorAll('.sheet-item').forEach(item => {
+                item.addEventListener('click', () => item.classList.toggle('selected'));
+            });
+        }
+
+        // PPT upload
+        const pptDropZone = document.getElementById('pptDropZone');
+        const pptFileInput = document.getElementById('pptFileInput');
+
+        pptDropZone.addEventListener('click', () => pptFileInput.click());
+        pptDropZone.addEventListener('dragover', e => { e.preventDefault(); pptDropZone.classList.add('dragover'); });
+        pptDropZone.addEventListener('dragleave', () => pptDropZone.classList.remove('dragover'));
+        pptDropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            pptDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) uploadPPT(e.dataTransfer.files[0]);
+        });
+        pptFileInput.addEventListener('change', e => { if (e.target.files[0]) uploadPPT(e.target.files[0]); });
+
+        async function uploadPPT(file) {
+            if (!file.name.match(/\.(pptx|ppt)$/i)) {
+                alert('請選擇 PowerPoint 檔案');
+                return;
+            }
+
+            showLoading('上傳 PPT: ' + file.name);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/upload-ppt', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail);
+                }
+                pptData = await res.json();
+
+                document.getElementById('pptInfo').classList.add('show');
+                document.getElementById('pptFilename').textContent = '✓ ' + pptData.filename;
+                document.getElementById('pptSlideCount').textContent = `(${pptData.total_slides} 頁)`;
+                pptDropZone.style.display = 'none';
+
+                renderSlideList();
+                updateGenerateBtn();
+            } catch (e) {
+                alert('上傳失敗: ' + e.message);
+            }
+
+            hideLoading();
+        }
+
+        function clearPPT() {
+            if (pptData) {
+                fetch(`/api/remove-file/${pptData.file_id}`, { method: 'DELETE' });
+            }
+            pptData = null;
+            document.getElementById('pptInfo').classList.remove('show');
+            pptDropZone.style.display = 'block';
+            renderSlideList();
+            updateGenerateBtn();
+        }
+
+        function renderSlideList() {
+            const container = document.getElementById('slideList');
+            if (!pptData) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">📑</div><p>上傳 PPT 查看頁面列表</p></div>';
+                return;
+            }
+
+            container.innerHTML = pptData.slides.map(s => `
+                <div class="slide-item">
+                    <span class="page-num">${s.page}</span>
+                    <span class="title">${s.title || '(無標題)'}</span>
+                </div>
+            `).join('');
+        }
+
+        function addSelectedMappings() {
+            const selected = document.querySelectorAll('.sheet-item.selected');
+            if (selected.length === 0) {
+                alert('請先選擇項目');
+                return;
+            }
+
+            let added = 0;
+            selected.forEach(item => {
+                const id = item.dataset.id;
+                const name = item.dataset.name;
+                const type = item.dataset.type;
+                const page = parseInt(item.querySelector('.page-input').value);
+
+                if (!page) return;
+                if (mappings.find(m => m.excel_id === id && m.name === name)) return;
+
+                mappings.push({
+                    excel_id: id,
+                    name: name,
+                    type: type,
+                    page: page,
+                    color: excelFiles[id].color,
+                    filename: excelFiles[id].filename
+                });
+
+                item.classList.remove('selected');
+                item.querySelector('.page-input').value = '';
+                added++;
+            });
+
+            if (added === 0) alert('請輸入頁碼');
+            renderMappingList();
+            updateCounts();
+            updateGenerateBtn();
+        }
+
+        function renderMappingList() {
+            const container = document.getElementById('mappingList');
+            if (mappings.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="grid-column:span 2"><div class="icon">🔗</div><p>尚未設定對應</p></div>';
+                return;
+            }
+
+            container.innerHTML = mappings.map((m, i) => `
+                <div class="mapping-item" style="border-left-color: ${m.color}">
+                    <div class="info">
+                        <div class="chart-name">${m.name}</div>
+                        <div class="excel-name">${m.filename}</div>
+                    </div>
+                    <span class="arrow">→</span>
+                    <span class="page-badge">P${m.page}</span>
+                    <button class="btn btn-ghost" onclick="removeMapping(${i})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function removeMapping(i) {
+            mappings.splice(i, 1);
+            renderMappingList();
+            updateCounts();
+            updateGenerateBtn();
+        }
+
+        function updateCounts() {
+            document.getElementById('excelCount').textContent = Object.keys(excelFiles).length;
+            document.getElementById('mappingCount').textContent = mappings.length;
+        }
+
+        function updateGenerateBtn() {
+            document.getElementById('generateBtn').disabled = 
+                Object.keys(excelFiles).length === 0 || !pptData || mappings.length === 0;
+        }
+
+        async function generatePPT() {
+            showLoading('產生 PowerPoint 中...');
+
+            try {
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        template_id: pptData.file_id,
+                        output_name: document.getElementById('outputName').value.trim(),
+                        mappings: mappings.map(m => ({
+                            excel_id: m.excel_id,
+                            name: m.name,
+                            type: m.type,
+                            page: m.page
+                        })),
+                        img_left: parseFloat(document.getElementById('imgLeft').value),
+                        img_top: parseFloat(document.getElementById('imgTop').value),
+                        img_width: parseFloat(document.getElementById('imgWidth').value),
+                        img_height: parseFloat(document.getElementById('imgHeight').value)
+                    })
+                });
+
+                if (!res.ok) throw new Error((await res.json()).detail);
+
+                const result = await res.json();
+                const success = result.results.filter(r => r.status === 'success').length;
+
+                document.getElementById('generateSection').style.display = 'none';
+                document.getElementById('resultSection').classList.add('show');
+                document.getElementById('resultInfo').textContent = `成功 ${success} / ${mappings.length}`;
+                document.getElementById('downloadBtn').href = result.download_url;
+
+            } catch (e) {
+                alert('失敗: ' + e.message);
+            }
+
+            hideLoading();
+        }
+
+        function resetForNew() {
+            document.getElementById('resultSection').classList.remove('show');
+            document.getElementById('generateSection').style.display = 'flex';
+            updateGenerateBtn();
+        }
+
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingOverlay').classList.add('show');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('show');
+        }
+    </script>
+</body>
+</html>
