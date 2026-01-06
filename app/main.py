@@ -67,7 +67,7 @@ class GenerateRequest(BaseModel):
     output_name: str
     mappings: List[ChartMapping]
     img_left: float = 0.423
-    img_top: float = 1.1
+    img_top: float = 1.4
     img_width: float = 12.0
     img_height: float = 5.6
 
@@ -123,27 +123,265 @@ def get_excel_info(excel_path: str) -> dict:
         pythoncom.CoUninitialize()
 
 
-def capture_item(excel_app, workbook, name: str, item_type: str, output_path: str) -> bool:
-    """Capture a worksheet or chart sheet as image"""
+def capture_item(excel_app, workbook, name: str, item_type: str, output_path: str, max_retries: int = 3) -> bool:
+    """Capture a worksheet or chart sheet as image
+    
+    Args:
+        excel_app: Excel application instance
+        workbook: Workbook object
+        name: Sheet or chart name
+        item_type: 'chartsheet' or 'worksheet'
+        output_path: Path to save the PNG image
+        max_retries: Maximum retry attempts for clipboard operations
+    
+    Returns:
+        True if capture succeeded, False otherwise
+    """
+    import time
+    
+    def validate_image(path: str, min_size: int = 1000) -> bool:
+        """Check if image file exists, has reasonable size, and has actual content"""
+        if not os.path.exists(path):
+            print(f"    [Validate] File does not exist: {path}")
+            return False
+        
+        size = os.path.getsize(path)
+        if size < min_size:
+            print(f"    [Validate] File too small: {size} bytes (min: {min_size})")
+            return False
+        
+        # Check image content using PIL
+        try:
+            from PIL import Image
+            import statistics
+            
+            img = Image.open(path)
+            # Convert to grayscale and get pixel data
+            gray = img.convert('L')
+            pixels = list(gray.getdata())
+            
+            # Check if image is mostly blank (very low variance)
+            unique_colors = len(set(pixels))
+            if unique_colors < 10:
+                print(f"    [Validate] Image appears blank: only {unique_colors} unique colors")
+                return False
+            
+            # Check standard deviation - if too low, image is likely blank/single color
+            try:
+                stdev = statistics.stdev(pixels)
+                if stdev < 5:
+                    print(f"    [Validate] Image has very low variance (stdev={stdev:.2f}), likely blank")
+                    return False
+            except statistics.StatisticsError:
+                pass  # Not enough data points
+            
+            print(f"    [Validate] Image OK: {size} bytes, {unique_colors} colors")
+            img.close()
+            
+        except Exception as e:
+            print(f"    [Validate] PIL check failed ({e}), relying on file size only")
+        
+        return True
+    
+    def clear_clipboard():
+        """Clear clipboard to avoid stale data issues"""
+        try:
+            import win32clipboard
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.CloseClipboard()
+        except:
+            pass
+    
+    def export_via_copypicture(source_obj, output_path: str, width: float, height: float) -> bool:
+        """Export an object using CopyPicture method as fallback"""
+        try:
+            clear_clipboard()
+            time.sleep(0.1)
+            
+            # Copy the object as picture
+            source_obj.CopyPicture(Appearance=1, Format=2)  # xlScreen=1, xlBitmap=2
+            time.sleep(0.2)
+            
+            # Create a new chart sheet to paste into (more reliable than ChartObject)
+            temp_chart_sheet = workbook.Charts.Add()
+            time.sleep(0.1)
+            
+            try:
+                temp_chart_sheet.Paste()
+                time.sleep(0.2)
+                temp_chart_sheet.Export(output_path, "PNG")
+            finally:
+                # Clean up temp chart sheet
+                excel_app.DisplayAlerts = False
+                temp_chart_sheet.Delete()
+            
+            return os.path.exists(output_path)
+            
+        except Exception as e:
+            print(f"    [CopyPicture Fallback] Failed: {e}")
+            return False
+    
     try:
         if item_type == 'chartsheet':
+            # Chart sheets are straightforward
+            print(f"    [ChartSheet] Exporting directly...")
             chart_sheet = workbook.Charts(name)
             chart_sheet.Export(output_path, "PNG")
+            
+            if not validate_image(output_path):
+                print(f"    [ChartSheet] Direct export invalid, trying CopyPicture fallback...")
+                if os.path.exists(output_path):
+                    os.remove(output_path)
+                # Try fallback
+                chart_sheet.ChartArea.CopyPicture(Appearance=1, Format=2)
+                time.sleep(0.2)
+                temp_chart_sheet = workbook.Charts.Add()
+                try:
+                    temp_chart_sheet.Paste()
+                    time.sleep(0.2)
+                    temp_chart_sheet.Export(output_path, "PNG")
+                finally:
+                    excel_app.DisplayAlerts = False
+                    temp_chart_sheet.Delete()
+                
+                if not validate_image(output_path):
+                    print(f"    [ChartSheet] Fallback also failed")
+                    return False
+                    
         else:
+            # Worksheet handling
             sheet = workbook.Worksheets(name)
-            if sheet.ChartObjects().Count > 0:
-                sheet.ChartObjects(1).Chart.Export(output_path, "PNG")
+            chart_count = 0
+            try:
+                chart_count = sheet.ChartObjects().Count
+            except:
+                pass
+            
+            print(f"    [Worksheet] Found {chart_count} embedded chart(s)")
+            
+            if chart_count > 0:
+                # Try to export the first chart directly
+                chart_obj = sheet.ChartObjects(1)
+                print(f"    [Worksheet] Trying direct Chart.Export()...")
+                chart_obj.Chart.Export(output_path, "PNG")
+                
+                if not validate_image(output_path):
+                    print(f"    [Worksheet] Direct export failed, trying CopyPicture on ChartObject...")
+                    if os.path.exists(output_path):
+                        os.remove(output_path)
+                    
+                    # Fallback: Use CopyPicture on the ChartObject itself
+                    success = False
+                    for attempt in range(max_retries):
+                        try:
+                            clear_clipboard()
+                            time.sleep(0.1)
+                            
+                            # Copy the chart object as picture
+                            chart_obj.CopyPicture(Appearance=1, Format=2)
+                            time.sleep(0.2)
+                            
+                            # Create temp chart sheet to paste into
+                            temp_chart_sheet = workbook.Charts.Add()
+                            time.sleep(0.1)
+                            
+                            try:
+                                temp_chart_sheet.Paste()
+                                time.sleep(0.2)
+                                temp_chart_sheet.Export(output_path, "PNG")
+                            finally:
+                                excel_app.DisplayAlerts = False
+                                temp_chart_sheet.Delete()
+                            
+                            if validate_image(output_path, min_size=500):
+                                success = True
+                                print(f"    [Worksheet] CopyPicture fallback succeeded on attempt {attempt + 1}")
+                                break
+                            else:
+                                print(f"    [Worksheet] Attempt {attempt + 1}: CopyPicture fallback validation failed")
+                                if os.path.exists(output_path):
+                                    os.remove(output_path)
+                                    
+                        except Exception as e:
+                            print(f"    [Worksheet] Attempt {attempt + 1} CopyPicture failed: {e}")
+                            time.sleep(0.3)
+                    
+                    if not success:
+                        # Last resort: try copying the entire used range
+                        print(f"    [Worksheet] Trying UsedRange CopyPicture as last resort...")
+                        try:
+                            used_range = sheet.UsedRange
+                            if export_via_copypicture(used_range, output_path, used_range.Width, used_range.Height):
+                                if validate_image(output_path, min_size=500):
+                                    success = True
+                                    print(f"    [Worksheet] UsedRange fallback succeeded")
+                        except Exception as e:
+                            print(f"    [Worksheet] UsedRange fallback failed: {e}")
+                    
+                    if not success:
+                        print(f"    [Worksheet] All methods failed for '{name}'")
+                        return False
             else:
-                used_range = sheet.UsedRange
-                used_range.CopyPicture(Appearance=1, Format=2)
-                temp_chart = workbook.Charts.Add()
-                temp_chart.Paste()
-                temp_chart.Export(output_path, "PNG")
-                excel_app.DisplayAlerts = False
-                temp_chart.Delete()
+                # Worksheet without charts - use CopyPicture with retries
+                print(f"    [Worksheet] No charts found, capturing UsedRange...")
+                success = False
+                last_error = None
+                
+                for attempt in range(max_retries):
+                    try:
+                        clear_clipboard()
+                        time.sleep(0.1)
+                        
+                        used_range = sheet.UsedRange
+                        
+                        # Check if range has content
+                        if used_range.Rows.Count == 0 or used_range.Columns.Count == 0:
+                            print(f"    [Worksheet] Sheet '{name}' appears empty")
+                            return False
+                        
+                        print(f"    [Worksheet] Attempt {attempt + 1}: UsedRange = {used_range.Rows.Count} rows x {used_range.Columns.Count} cols")
+                        
+                        # Copy as picture (Appearance=1: xlScreen, Format=2: xlBitmap)
+                        used_range.CopyPicture(Appearance=1, Format=2)
+                        time.sleep(0.2)
+                        
+                        # Create temp chart SHEET (more reliable than embedded ChartObject)
+                        temp_chart_sheet = workbook.Charts.Add()
+                        time.sleep(0.1)
+                        
+                        try:
+                            temp_chart_sheet.Paste()
+                            time.sleep(0.2)
+                            temp_chart_sheet.Export(output_path, "PNG")
+                        finally:
+                            excel_app.DisplayAlerts = False
+                            temp_chart_sheet.Delete()
+                        
+                        if validate_image(output_path, min_size=500):
+                            success = True
+                            break
+                        else:
+                            print(f"    [Worksheet] Attempt {attempt + 1}: Image validation failed")
+                            if os.path.exists(output_path):
+                                os.remove(output_path)
+                                
+                    except Exception as e:
+                        last_error = e
+                        print(f"    [Worksheet] Attempt {attempt + 1} failed: {e}")
+                        time.sleep(0.3)
+                        continue
+                
+                if not success:
+                    print(f"    [Worksheet] Failed to capture '{name}' after {max_retries} attempts. Last error: {last_error}")
+                    return False
+        
         return True
+        
     except Exception as e:
-        print(f"Error capturing {name}: {e}")
+        print(f"[Error] Capturing {name}: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -311,12 +549,19 @@ async def generate_ppt(request: GenerateRequest):
             
             for mapping in excel_info['mappings']:
                 key = f"{excel_id}|{mapping.name}"
-                safe_name = f"{excel_id}_{mapping.name}".replace(' ', '_').replace('#', '_').replace('/', '_')
+                # Sanitize filename - remove Windows invalid characters
+                safe_name = f"{excel_id}_{mapping.name}"
+                for char in '<>:"/\\|?*#':
+                    safe_name = safe_name.replace(char, '_')
+                safe_name = safe_name.replace(' ', '_')
                 output_path = str(job_dir / f"{safe_name}.png")
                 
+                print(f"  Capturing: {mapping.name} (type: {mapping.type})")
                 if capture_item(excel_app, workbook, mapping.name, mapping.type, output_path):
                     extracted[key] = output_path
-                    print(f"  Extracted: {mapping.name}")
+                    print(f"  ✓ Extracted: {mapping.name} ({os.path.getsize(output_path)} bytes)")
+                else:
+                    print(f"  ✗ Failed to extract: {mapping.name}")
             
             workbook.Close(SaveChanges=False)
         
@@ -351,19 +596,50 @@ async def generate_ppt(request: GenerateRequest):
                 continue
             
             slide = prs.slides[slide_idx]
-            pic = slide.shapes.add_picture(
-                extracted[key],
-                Inches(request.img_left),
-                Inches(request.img_top),
-                width=Inches(request.img_width),
-                height=Inches(request.img_height)
-            )
-            results.append({
-                "name": mapping.name,
-                "excel": excel_filename,
-                "status": "success",
-                "page": mapping.page
-            })
+            
+            # Verify image file before adding
+            image_path = extracted[key]
+            if not os.path.exists(image_path):
+                results.append({
+                    "name": mapping.name,
+                    "excel": excel_filename,
+                    "status": "failed",
+                    "reason": "圖片檔案不存在"
+                })
+                continue
+            
+            image_size = os.path.getsize(image_path)
+            if image_size < 500:  # Less than 500 bytes is likely corrupted
+                results.append({
+                    "name": mapping.name,
+                    "excel": excel_filename,
+                    "status": "failed",
+                    "reason": f"圖片檔案可能損壞 (大小: {image_size} bytes)"
+                })
+                continue
+            
+            try:
+                pic = slide.shapes.add_picture(
+                    image_path,
+                    Inches(request.img_left),
+                    Inches(request.img_top),
+                    width=Inches(request.img_width),
+                    height=Inches(request.img_height)
+                )
+                results.append({
+                    "name": mapping.name,
+                    "excel": excel_filename,
+                    "status": "success",
+                    "page": mapping.page
+                })
+            except Exception as img_error:
+                print(f"Error adding image to slide: {img_error}")
+                results.append({
+                    "name": mapping.name,
+                    "excel": excel_filename,
+                    "status": "failed",
+                    "reason": f"無法插入圖片: {str(img_error)}"
+                })
         
         # Save output
         output_filename = f"{request.output_name}.pptx" if not request.output_name.endswith('.pptx') else request.output_name
