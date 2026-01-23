@@ -2,7 +2,7 @@
 
 將 Excel 圖表和工作表自動轉換成 PowerPoint 簡報的網頁應用程式。
 
-![Version](https://img.shields.io/badge/version-4.1.0-blue)
+![Version](https://img.shields.io/badge/version-5.0.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
 
@@ -14,12 +14,14 @@
 - ⚙️ **可調整尺寸** - 自訂圖片在投影片中的位置和大小
 - 📥 **即時下載** - 產生後立即下載 PowerPoint 檔案
 - 🔄 **多檔案支援** - 可同時處理多個 Excel 檔案
+- ✏️ **可編輯圖表** - 支援插入可編輯的圖表 (v5.0 新功能)
 
 ## 🖥️ 系統需求
 
 - **作業系統**: Windows 10/11 (需要 Windows COM 自動化)
 - **Python**: 3.8 或更高版本
 - **Microsoft Excel**: 必須安裝 (用於擷取圖表)
+- **Microsoft PowerPoint**: 必須安裝 (可編輯圖表模式需要)
 
 ## 📦 安裝步驟
 
@@ -79,13 +81,19 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 2. 輸入目標頁碼
 3. 點擊「➕ 加入」按鈕
 
-### 步驟 4：調整圖片位置 (選用)
+### 步驟 4：選擇圖表模式
+- **圖片模式** (預設): 圖表以靜態圖片插入，無法在 PowerPoint 中編輯
+- **可編輯圖表模式**: 圖表以可編輯物件插入，可在 PowerPoint 中修改資料、格式等
+
+> 💡 **提示**: 可編輯圖表模式需要 Excel 和 PowerPoint 在處理時短暫顯示視窗
+
+### 步驟 5：調整圖片位置 (選用)
 - **左**: 圖片左邊緣距離 (英吋)
 - **上**: 圖片上邊緣距離 (英吋)
 - **寬**: 圖片寬度 (英吋)
 - **高**: 圖片高度 (英吋)
 
-### 步驟 5：產生 PowerPoint
+### 步驟 6：產生 PowerPoint
 1. 輸入輸出檔名
 2. 點擊「⚡ 產生 PowerPoint」
 3. 等待處理完成後下載
@@ -139,6 +147,7 @@ Body:
       "type": "worksheet"
     }
   ],
+  "chart_mode": "image",  // "image" 或 "embedded"
   "img_left": 0.423,
   "img_top": 1.4,
   "img_width": 12.0,
@@ -150,7 +159,8 @@ Response:
   "status": "success",
   "job_id": "job123",
   "download_url": "/api/download/job123/Report.pptx",
-  "results": [...]
+  "results": [...],
+  "mode": "image"  // 實際使用的模式
 }
 ```
 
@@ -195,6 +205,22 @@ Excel-to-ppt/
 | pywin32 | Windows COM 自動化 |
 | openpyxl | Excel 讀取 |
 | Pillow | 圖片處理 |
+
+### 圖表模式說明
+
+本專案支援兩種圖表插入模式：
+
+| 模式 | 說明 | 優點 | 缺點 |
+|------|------|------|------|
+| **圖片模式** | 圖表匯出為 PNG 圖片後插入 | 處理快速、相容性高 | 無法在 PPT 中編輯 |
+| **可編輯模式** | 圖表以 Office 物件複製貼上 | 可在 PPT 中編輯資料和格式 | 需要 PPT 安裝、處理稍慢 |
+
+#### 可編輯圖表的使用方式
+
+1. 在設定中選擇「可編輯圖表」模式
+2. 產生 PowerPoint 後開啟檔案
+3. 點擊圖表，右鍵可看到「編輯資料」選項
+4. 雙擊圖表可直接編輯
 
 ### 圖表擷取機制
 
@@ -269,6 +295,12 @@ Excel-to-ppt/
 3. 嘗試用 Excel 開啟並重新儲存檔案
 
 ## 📝 更新日誌
+
+### v5.0.0 (2026-01-23)
+- ✨ **新增可編輯圖表模式** - 圖表可在 PowerPoint 中編輯資料和格式
+- ✨ 新增圖表模式選擇器 (圖片 / 可編輯)
+- ✨ 使用 PowerPoint COM 自動化實現可編輯圖表貼上
+- 📖 更新文件說明兩種圖表模式的差異
 
 ### v4.1.0 (2026-01-06)
 - 🐛 修復嵌入圖表匯出為空白圖片的問題

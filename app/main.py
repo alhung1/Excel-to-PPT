@@ -23,7 +23,7 @@ from pptx.util import Inches
 app = FastAPI(
     title="Excel to PowerPoint Generator",
     description="Upload Excel and PPT files to generate reports",
-    version="4.0.0"
+    version="5.0.0"
 )
 
 # CORS middleware
@@ -66,6 +66,7 @@ class GenerateRequest(BaseModel):
     template_id: str
     output_name: str
     mappings: List[ChartMapping]
+    chart_mode: str = "image"  # "image" or "embedded"
     img_left: float = 0.423
     img_top: float = 1.4
     img_width: float = 12.0
@@ -505,15 +506,20 @@ async def remove_file(file_id: str):
     raise HTTPException(404, "檔案不存在")
 
 
-@app.post("/api/generate")
-async def generate_ppt(request: GenerateRequest):
-    """Generate PowerPoint with chart mappings"""
-    
-    # Get template path
-    if request.template_id not in uploaded_files:
-        raise HTTPException(404, "PPT 模板不存在，請重新上傳")
-    
-    template_path = uploaded_files[request.template_id]["path"]
+def clear_clipboard():
+    """Clear the Windows clipboard"""
+    try:
+        import win32clipboard
+        win32clipboard.OpenClipboard()
+        win32clipboard.EmptyClipboard()
+        win32clipboard.CloseClipboard()
+    except:
+        pass
+
+
+def generate_ppt_image_mode(request: GenerateRequest, template_path: str, job_dir: Path) -> dict:
+    """Generate PPT using image mode (static pictures)"""
+    import time
     
     # Group mappings by Excel file
     excel_files = {}
@@ -529,129 +535,366 @@ async def generate_ppt(request: GenerateRequest):
             }
         excel_files[m.excel_id]["mappings"].append(m)
     
+    extracted = {}
+    
+    # Extract from each Excel file
+    pythoncom.CoInitialize()
+    
+    excel_app = win32.DispatchEx('Excel.Application')
+    excel_app.Visible = False
+    excel_app.DisplayAlerts = False
+    
+    for excel_id, excel_info in excel_files.items():
+        print(f"Opening: {excel_info['filename']}")
+        workbook = excel_app.Workbooks.Open(excel_info['path'])
+        
+        for mapping in excel_info['mappings']:
+            key = f"{excel_id}|{mapping.name}"
+            # Sanitize filename - remove Windows invalid characters
+            safe_name = f"{excel_id}_{mapping.name}"
+            for char in '<>:"/\\|?*#':
+                safe_name = safe_name.replace(char, '_')
+            safe_name = safe_name.replace(' ', '_')
+            output_path = str(job_dir / f"{safe_name}.png")
+            
+            print(f"  Capturing: {mapping.name} (type: {mapping.type})")
+            if capture_item(excel_app, workbook, mapping.name, mapping.type, output_path):
+                extracted[key] = output_path
+                print(f"  [OK] Extracted: {mapping.name} ({os.path.getsize(output_path)} bytes)")
+            else:
+                print(f"  [FAIL] Failed to extract: {mapping.name}")
+        
+        workbook.Close(SaveChanges=False)
+    
+    excel_app.Quit()
+    pythoncom.CoUninitialize()
+    
+    # Generate PPT using python-pptx
+    prs = Presentation(template_path)
+    
+    results = []
+    for mapping in request.mappings:
+        key = f"{mapping.excel_id}|{mapping.name}"
+        excel_filename = uploaded_files[mapping.excel_id]["filename"]
+        
+        if key not in extracted:
+            results.append({
+                "name": mapping.name,
+                "excel": excel_filename,
+                "status": "failed",
+                "reason": "擷取失敗"
+            })
+            continue
+        
+        slide_idx = mapping.page - 1
+        if slide_idx >= len(prs.slides):
+            results.append({
+                "name": mapping.name,
+                "excel": excel_filename,
+                "status": "failed",
+                "reason": f"第 {mapping.page} 頁不存在"
+            })
+            continue
+        
+        slide = prs.slides[slide_idx]
+        
+        # Verify image file before adding
+        image_path = extracted[key]
+        if not os.path.exists(image_path):
+            results.append({
+                "name": mapping.name,
+                "excel": excel_filename,
+                "status": "failed",
+                "reason": "圖片檔案不存在"
+            })
+            continue
+        
+        image_size = os.path.getsize(image_path)
+        if image_size < 500:
+            results.append({
+                "name": mapping.name,
+                "excel": excel_filename,
+                "status": "failed",
+                "reason": f"圖片檔案可能損壞 (大小: {image_size} bytes)"
+            })
+            continue
+        
+        try:
+            pic = slide.shapes.add_picture(
+                image_path,
+                Inches(request.img_left),
+                Inches(request.img_top),
+                width=Inches(request.img_width),
+                height=Inches(request.img_height)
+            )
+            results.append({
+                "name": mapping.name,
+                "excel": excel_filename,
+                "status": "success",
+                "page": mapping.page,
+                "mode": "image"
+            })
+        except Exception as img_error:
+            print(f"Error adding image to slide: {img_error}")
+            results.append({
+                "name": mapping.name,
+                "excel": excel_filename,
+                "status": "failed",
+                "reason": f"無法插入圖片: {str(img_error)}"
+            })
+    
+    # Save output
+    output_filename = f"{request.output_name}.pptx" if not request.output_name.endswith('.pptx') else request.output_name
+    output_path = job_dir / output_filename
+    prs.save(str(output_path))
+    
+    return {
+        "results": results,
+        "output_filename": output_filename,
+        "output_path": str(output_path)
+    }
+
+
+def generate_ppt_embedded_mode(request: GenerateRequest, template_path: str, job_dir: Path) -> dict:
+    """Generate PPT using embedded mode (editable charts)"""
+    import time
+    
+    # Group mappings by Excel file
+    excel_files = {}
+    for m in request.mappings:
+        if m.excel_id not in uploaded_files:
+            raise HTTPException(404, f"Excel 檔案不存在: {m.excel_id}")
+        
+        if m.excel_id not in excel_files:
+            excel_files[m.excel_id] = {
+                "path": uploaded_files[m.excel_id]["path"],
+                "filename": uploaded_files[m.excel_id]["filename"],
+                "mappings": []
+            }
+        excel_files[m.excel_id]["mappings"].append(m)
+    
+    results = []
+    output_filename = f"{request.output_name}.pptx" if not request.output_name.endswith('.pptx') else request.output_name
+    output_path = job_dir / output_filename
+    
+    # Copy template to output first
+    shutil.copy(template_path, str(output_path))
+    
+    pythoncom.CoInitialize()
+    
+    excel_app = None
+    ppt_app = None
+    presentation = None
+    
+    try:
+        # Start Excel - must be visible for clipboard operations
+        print("[Embedded Mode] Starting Excel...")
+        excel_app = win32.DispatchEx('Excel.Application')
+        excel_app.Visible = True
+        excel_app.DisplayAlerts = False
+        
+        # Start PowerPoint - must be visible for paste operations
+        print("[Embedded Mode] Starting PowerPoint...")
+        ppt_app = win32.DispatchEx('PowerPoint.Application')
+        ppt_app.Visible = True
+        
+        # Open the output PPT
+        presentation = ppt_app.Presentations.Open(str(output_path.resolve()))
+        time.sleep(0.5)
+        
+        # Process each Excel file
+        for excel_id, excel_info in excel_files.items():
+            print(f"[Embedded Mode] Opening: {excel_info['filename']}")
+            workbook = excel_app.Workbooks.Open(os.path.abspath(excel_info['path']))
+            time.sleep(0.3)
+            
+            for mapping in excel_info['mappings']:
+                excel_filename = excel_info['filename']
+                print(f"  [Embedded Mode] Processing: {mapping.name} -> Page {mapping.page}")
+                
+                # Check slide exists
+                if mapping.page > presentation.Slides.Count:
+                    results.append({
+                        "name": mapping.name,
+                        "excel": excel_filename,
+                        "status": "failed",
+                        "reason": f"第 {mapping.page} 頁不存在"
+                    })
+                    continue
+                
+                try:
+                    # Get the chart to copy
+                    chart_obj = None
+                    source_sheet = None
+                    
+                    if mapping.type == 'chartsheet':
+                        # Chart sheet
+                        chart_sheet = workbook.Charts(mapping.name)
+                        chart_sheet.Activate()
+                        time.sleep(0.2)
+                        
+                        clear_clipboard()
+                        time.sleep(0.1)
+                        
+                        chart_sheet.ChartArea.Copy()
+                    else:
+                        # Worksheet with embedded chart
+                        sheet = workbook.Worksheets(mapping.name)
+                        sheet.Activate()
+                        time.sleep(0.2)
+                        
+                        chart_count = 0
+                        try:
+                            chart_count = sheet.ChartObjects().Count
+                        except:
+                            pass
+                        
+                        if chart_count > 0:
+                            chart_obj = sheet.ChartObjects(1)
+                            chart_obj.Select()
+                            time.sleep(0.2)
+                            
+                            clear_clipboard()
+                            time.sleep(0.1)
+                            
+                            chart_obj.Chart.ChartArea.Copy()
+                        else:
+                            # No chart - fallback to image mode for this item
+                            print(f"    [Embedded Mode] No chart found, falling back to image mode")
+                            results.append({
+                                "name": mapping.name,
+                                "excel": excel_filename,
+                                "status": "failed",
+                                "reason": "工作表中沒有圖表，請使用圖片模式"
+                            })
+                            continue
+                    
+                    time.sleep(0.5)  # Wait for clipboard
+                    
+                    # Paste into PowerPoint
+                    slide = presentation.Slides(mapping.page)
+                    
+                    try:
+                        shape = slide.Shapes.Paste()
+                        time.sleep(0.3)
+                        
+                        # Position and resize the chart
+                        if hasattr(shape, 'Item'):
+                            shape = shape.Item(1)
+                        
+                        # Convert inches to points (1 inch = 72 points)
+                        shape.Left = request.img_left * 72
+                        shape.Top = request.img_top * 72
+                        shape.Width = request.img_width * 72
+                        shape.Height = request.img_height * 72
+                        
+                        results.append({
+                            "name": mapping.name,
+                            "excel": excel_filename,
+                            "status": "success",
+                            "page": mapping.page,
+                            "mode": "embedded"
+                        })
+                        print(f"    [OK] Embedded chart pasted successfully")
+                        
+                    except Exception as paste_error:
+                        print(f"    [FAIL] Paste failed: {paste_error}")
+                        results.append({
+                            "name": mapping.name,
+                            "excel": excel_filename,
+                            "status": "failed",
+                            "reason": f"貼上失敗: {str(paste_error)}"
+                        })
+                        
+                except Exception as e:
+                    print(f"    [ERROR] Error processing {mapping.name}: {e}")
+                    results.append({
+                        "name": mapping.name,
+                        "excel": excel_filename,
+                        "status": "failed",
+                        "reason": str(e)
+                    })
+            
+            workbook.Close(SaveChanges=False)
+        
+        # Save and close presentation
+        presentation.Save()
+        presentation.Close()
+        presentation = None
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise e
+        
+    finally:
+        # Cleanup
+        if presentation:
+            try:
+                presentation.Close()
+            except:
+                pass
+        
+        if excel_app:
+            try:
+                excel_app.Quit()
+            except:
+                pass
+        
+        if ppt_app:
+            try:
+                ppt_app.Quit()
+            except:
+                pass
+        
+        pythoncom.CoUninitialize()
+    
+    return {
+        "results": results,
+        "output_filename": output_filename,
+        "output_path": str(output_path)
+    }
+
+
+@app.post("/api/generate")
+async def generate_ppt(request: GenerateRequest):
+    """Generate PowerPoint with chart mappings
+    
+    Supports two modes:
+    - image: Charts are inserted as static PNG images (default)
+    - embedded: Charts are inserted as editable objects
+    """
+    
+    # Get template path
+    if request.template_id not in uploaded_files:
+        raise HTTPException(404, "PPT 模板不存在，請重新上傳")
+    
+    template_path = uploaded_files[request.template_id]["path"]
+    
+    # Validate mappings
+    for m in request.mappings:
+        if m.excel_id not in uploaded_files:
+            raise HTTPException(404, f"Excel 檔案不存在: {m.excel_id}")
+    
     job_id = uuid.uuid4().hex[:8]
     job_dir = OUTPUT_DIR / job_id
     job_dir.mkdir(exist_ok=True)
     
     try:
-        extracted = {}
+        print(f"[Generate] Mode: {request.chart_mode}")
         
-        # Extract from each Excel file
-        pythoncom.CoInitialize()
-        
-        excel_app = win32.DispatchEx('Excel.Application')
-        excel_app.Visible = False
-        excel_app.DisplayAlerts = False
-        
-        for excel_id, excel_info in excel_files.items():
-            print(f"Opening: {excel_info['filename']}")
-            workbook = excel_app.Workbooks.Open(excel_info['path'])
-            
-            for mapping in excel_info['mappings']:
-                key = f"{excel_id}|{mapping.name}"
-                # Sanitize filename - remove Windows invalid characters
-                safe_name = f"{excel_id}_{mapping.name}"
-                for char in '<>:"/\\|?*#':
-                    safe_name = safe_name.replace(char, '_')
-                safe_name = safe_name.replace(' ', '_')
-                output_path = str(job_dir / f"{safe_name}.png")
-                
-                print(f"  Capturing: {mapping.name} (type: {mapping.type})")
-                if capture_item(excel_app, workbook, mapping.name, mapping.type, output_path):
-                    extracted[key] = output_path
-                    print(f"  ✓ Extracted: {mapping.name} ({os.path.getsize(output_path)} bytes)")
-                else:
-                    print(f"  ✗ Failed to extract: {mapping.name}")
-            
-            workbook.Close(SaveChanges=False)
-        
-        excel_app.Quit()
-        pythoncom.CoUninitialize()
-        
-        # Generate PPT
-        prs = Presentation(template_path)
-        
-        results = []
-        for mapping in request.mappings:
-            key = f"{mapping.excel_id}|{mapping.name}"
-            excel_filename = uploaded_files[mapping.excel_id]["filename"]
-            
-            if key not in extracted:
-                results.append({
-                    "name": mapping.name,
-                    "excel": excel_filename,
-                    "status": "failed",
-                    "reason": "擷取失敗"
-                })
-                continue
-            
-            slide_idx = mapping.page - 1
-            if slide_idx >= len(prs.slides):
-                results.append({
-                    "name": mapping.name,
-                    "excel": excel_filename,
-                    "status": "failed",
-                    "reason": f"第 {mapping.page} 頁不存在"
-                })
-                continue
-            
-            slide = prs.slides[slide_idx]
-            
-            # Verify image file before adding
-            image_path = extracted[key]
-            if not os.path.exists(image_path):
-                results.append({
-                    "name": mapping.name,
-                    "excel": excel_filename,
-                    "status": "failed",
-                    "reason": "圖片檔案不存在"
-                })
-                continue
-            
-            image_size = os.path.getsize(image_path)
-            if image_size < 500:  # Less than 500 bytes is likely corrupted
-                results.append({
-                    "name": mapping.name,
-                    "excel": excel_filename,
-                    "status": "failed",
-                    "reason": f"圖片檔案可能損壞 (大小: {image_size} bytes)"
-                })
-                continue
-            
-            try:
-                pic = slide.shapes.add_picture(
-                    image_path,
-                    Inches(request.img_left),
-                    Inches(request.img_top),
-                    width=Inches(request.img_width),
-                    height=Inches(request.img_height)
-                )
-                results.append({
-                    "name": mapping.name,
-                    "excel": excel_filename,
-                    "status": "success",
-                    "page": mapping.page
-                })
-            except Exception as img_error:
-                print(f"Error adding image to slide: {img_error}")
-                results.append({
-                    "name": mapping.name,
-                    "excel": excel_filename,
-                    "status": "failed",
-                    "reason": f"無法插入圖片: {str(img_error)}"
-                })
-        
-        # Save output
-        output_filename = f"{request.output_name}.pptx" if not request.output_name.endswith('.pptx') else request.output_name
-        output_path = job_dir / output_filename
-        prs.save(str(output_path))
+        if request.chart_mode == "embedded":
+            result = generate_ppt_embedded_mode(request, template_path, job_dir)
+        else:
+            result = generate_ppt_image_mode(request, template_path, job_dir)
         
         return {
             "status": "success",
             "job_id": job_id,
-            "download_url": f"/api/download/{job_id}/{output_filename}",
-            "results": results,
-            "output_file": str(output_path)
+            "download_url": f"/api/download/{job_id}/{result['output_filename']}",
+            "results": result['results'],
+            "output_file": result['output_path'],
+            "mode": request.chart_mode
         }
         
     except Exception as e:

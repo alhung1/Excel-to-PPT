@@ -580,12 +580,19 @@
 
                 <div class="settings-row">
                     <div class="setting-item">
+                        <label>模式:</label>
+                        <select id="chartMode" style="padding: 5px 8px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); font-size: 0.8rem;">
+                            <option value="image">圖片 (不可編輯)</option>
+                            <option value="embedded">可編輯圖表</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
                         <label>左:</label>
                         <input type="number" id="imgLeft" value="0.423" step="0.1">
                     </div>
                     <div class="setting-item">
                         <label>上:</label>
-                        <input type="number" id="imgTop" value="1.1" step="0.1">
+                        <input type="number" id="imgTop" value="1.4" step="0.1">
                     </div>
                     <div class="setting-item">
                         <label>寬:</label>
@@ -912,7 +919,9 @@
         }
 
         async function generatePPT() {
-            showLoading('產生 PowerPoint 中...');
+            const chartMode = document.getElementById('chartMode').value;
+            const modeText = chartMode === 'embedded' ? '可編輯圖表' : '圖片';
+            showLoading(`產生 PowerPoint 中... (${modeText}模式)`);
 
             try {
                 const res = await fetch('/api/generate', {
@@ -927,6 +936,7 @@
                             type: m.type,
                             page: m.page
                         })),
+                        chart_mode: chartMode,
                         img_left: parseFloat(document.getElementById('imgLeft').value),
                         img_top: parseFloat(document.getElementById('imgTop').value),
                         img_width: parseFloat(document.getElementById('imgWidth').value),
@@ -938,10 +948,11 @@
 
                 const result = await res.json();
                 const success = result.results.filter(r => r.status === 'success').length;
+                const modeLabel = result.mode === 'embedded' ? '可編輯' : '圖片';
 
                 document.getElementById('generateSection').style.display = 'none';
                 document.getElementById('resultSection').classList.add('show');
-                document.getElementById('resultInfo').textContent = `成功 ${success} / ${mappings.length}`;
+                document.getElementById('resultInfo').textContent = `成功 ${success} / ${mappings.length} (${modeLabel}模式)`;
                 document.getElementById('downloadBtn').href = result.download_url;
 
             } catch (e) {
