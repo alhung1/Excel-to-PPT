@@ -38,7 +38,7 @@ CHART_MAPPINGS = [
 
 # Image positioning (based on your template)
 IMG_LEFT = 0.423      # inches
-IMG_TOP = 1.1         # inches
+IMG_TOP = 1.4         # inches
 IMG_WIDTH = 12.0      # inches
 IMG_HEIGHT = 5.6      # inches
 

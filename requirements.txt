@@ -1,4 +1,4 @@
-# Excel to PowerPoint Generator
+# Excel to PowerPoint Generator v6.0
 # Web Framework
 fastapi
 uvicorn[standard]
@@ -7,11 +7,17 @@ python-multipart
 # PowerPoint Generation
 python-pptx
 
-# Excel Reading (optional, for data extraction)
+# Excel Reading
 openpyxl
 
 # Windows COM Automation (for chart capture)
-pywin32
+pywin32; sys_platform == 'win32'
 
 # Image Processing
 Pillow
+
+# Data Validation
+pydantic>=2.0
+
+# HTTP Client (for testing)
+httpx

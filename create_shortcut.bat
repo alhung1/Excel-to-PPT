@@ -26,4 +26,3 @@ echo.
 echo ✓ 桌面捷徑已建立: "Excel to PPT Generator"
 echo.
 timeout /t 3 >nul
-

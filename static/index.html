@@ -257,6 +257,21 @@
             font-size: 0.8rem;
         }
 
+        .sheet-item .mode-select {
+            padding: 3px 4px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .sheet-item .mode-select.embedded {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
         /* PPT Section */
         .ppt-info {
             padding: 12px;
@@ -351,6 +366,17 @@
             border-radius: 4px;
             font-weight: 600;
             font-size: 0.8rem;
+        }
+        .mapping-item .mode-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+        }
+        .mapping-item .mode-badge.embedded {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent-purple);
         }
 
         /* Settings */
@@ -580,13 +606,6 @@
 
                 <div class="settings-row">
                     <div class="setting-item">
-                        <label>模式:</label>
-                        <select id="chartMode" style="padding: 5px 8px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-primary); font-size: 0.8rem;">
-                            <option value="image">圖片 (不可編輯)</option>
-                            <option value="embedded">可編輯圖表</option>
-                        </select>
-                    </div>
-                    <div class="setting-item">
                         <label>左:</label>
                         <input type="number" id="imgLeft" value="0.423" step="0.1">
                     </div>
@@ -603,6 +622,9 @@
                         <input type="number" id="imgHeight" value="5.6" step="0.1">
                     </div>
                 </div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">
+                    提示: 若目標投影片標題屬於 <code>Mesh Backhaul</code> 或 <code>Mesh Fronthaul</code>，系統會自動套用主圖固定版型；其他頁面仍使用上方尺寸設定。
+                </p>
             </div>
 
             <!-- Generate -->
@@ -749,6 +771,10 @@
                         <div class="sheet-item" data-id="${id}" data-name="${ws.name}" data-type="worksheet">
                             <span class="name">${ws.name}</span>
                             <span class="type">sheet</span>
+                            <select class="mode-select" onclick="event.stopPropagation()" onchange="updateModeStyle(this)">
+                                <option value="image">圖片</option>
+                                <option value="embedded">可編輯</option>
+                            </select>
                             <input type="number" class="page-input" placeholder="頁" min="1" onclick="event.stopPropagation()">
                         </div>`;
                 });
@@ -758,6 +784,10 @@
                         <div class="sheet-item" data-id="${id}" data-name="${cs.name}" data-type="chartsheet">
                             <span class="name">${cs.name}</span>
                             <span class="type chartsheet">chart</span>
+                            <select class="mode-select" onclick="event.stopPropagation()" onchange="updateModeStyle(this)">
+                                <option value="image">圖片</option>
+                                <option value="embedded">可編輯</option>
+                            </select>
                             <input type="number" class="page-input" placeholder="頁" min="1" onclick="event.stopPropagation()">
                         </div>`;
                 });
@@ -844,6 +874,14 @@
             `).join('');
         }
 
+        function updateModeStyle(select) {
+            if (select.value === 'embedded') {
+                select.classList.add('embedded');
+            } else {
+                select.classList.remove('embedded');
+            }
+        }
+
         function addSelectedMappings() {
             const selected = document.querySelectorAll('.sheet-item.selected');
             if (selected.length === 0) {
@@ -857,6 +895,7 @@
                 const name = item.dataset.name;
                 const type = item.dataset.type;
                 const page = parseInt(item.querySelector('.page-input').value);
+                const chartMode = item.querySelector('.mode-select').value;
 
                 if (!page) return;
                 if (mappings.find(m => m.excel_id === id && m.name === name)) return;
@@ -866,12 +905,15 @@
                     name: name,
                     type: type,
                     page: page,
+                    chart_mode: chartMode,
                     color: excelFiles[id].color,
                     filename: excelFiles[id].filename
                 });
 
                 item.classList.remove('selected');
                 item.querySelector('.page-input').value = '';
+                item.querySelector('.mode-select').value = 'image';
+                item.querySelector('.mode-select').classList.remove('embedded');
                 added++;
             });
 
@@ -894,6 +936,7 @@
                         <div class="chart-name">${m.name}</div>
                         <div class="excel-name">${m.filename}</div>
                     </div>
+                    <span class="mode-badge ${m.chart_mode === 'embedded' ? 'embedded' : ''}">${m.chart_mode === 'embedded' ? '可編輯' : '圖片'}</span>
                     <span class="arrow">→</span>
                     <span class="page-badge">P${m.page}</span>
                     <button class="btn btn-ghost" onclick="removeMapping(${i})">✕</button>
@@ -919,8 +962,14 @@
         }
 
         async function generatePPT() {
-            const chartMode = document.getElementById('chartMode').value;
-            const modeText = chartMode === 'embedded' ? '可編輯圖表' : '圖片';
+            const imageCount = mappings.filter(m => m.chart_mode === 'image').length;
+            const embeddedCount = mappings.filter(m => m.chart_mode === 'embedded').length;
+            let modeText = '圖片';
+            if (imageCount > 0 && embeddedCount > 0) {
+                modeText = '混合';
+            } else if (embeddedCount > 0) {
+                modeText = '可編輯圖表';
+            }
             showLoading(`產生 PowerPoint 中... (${modeText}模式)`);
 
             try {
@@ -934,9 +983,9 @@
                             excel_id: m.excel_id,
                             name: m.name,
                             type: m.type,
-                            page: m.page
+                            page: m.page,
+                            chart_mode: m.chart_mode || 'image'
                         })),
-                        chart_mode: chartMode,
                         img_left: parseFloat(document.getElementById('imgLeft').value),
                         img_top: parseFloat(document.getElementById('imgTop').value),
                         img_width: parseFloat(document.getElementById('imgWidth').value),
@@ -948,7 +997,12 @@
 
                 const result = await res.json();
                 const success = result.results.filter(r => r.status === 'success').length;
-                const modeLabel = result.mode === 'embedded' ? '可編輯' : '圖片';
+                let modeLabel = '圖片';
+                if (result.mode === 'mixed') {
+                    modeLabel = '混合';
+                } else if (result.mode === 'embedded') {
+                    modeLabel = '可編輯';
+                }
 
                 document.getElementById('generateSection').style.display = 'none';
                 document.getElementById('resultSection').classList.add('show');

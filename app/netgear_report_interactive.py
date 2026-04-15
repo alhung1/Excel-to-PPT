@@ -20,7 +20,7 @@ TEMP_DIR = r"C:\Users\alhung\excel-to-ppt\temp_charts"
 
 # Image positioning (based on your adjusted template)
 IMG_LEFT = Inches(0.423)
-IMG_TOP = Inches(1.1)
+IMG_TOP = Inches(1.4)
 IMG_WIDTH = Inches(12.0)
 IMG_HEIGHT = Inches(5.6)
 
