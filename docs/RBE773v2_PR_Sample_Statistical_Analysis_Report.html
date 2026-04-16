@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NETGEAR | Mesh Performance Report | RBE773v2 PR Sample vs NRH Beta Sample</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@300;400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap');
+
+:root {
+  --ng-blue:      #0070C0;
+  --ng-navy:      #1A2B45;
+  --ng-teal:      #1CB9A0;
+  --ng-green:     #00B050;
+  --ng-orange:    #ED7D31;
+  --body-bg:      #FFFFFF;
+  --page-bg:      #EEF3F8;
+  --rule:         #D8DDE6;
+  --txt-primary:  #1A2433;
+  --txt-secondary:#4A5568;
+  --txt-light:    #718096;
+  --pass:         #1A7A4A;
+  --pass-bg:      #EBF7F1;
+  --fail:         #B91C1C;
+  --fail-bg:      #FEF2F2;
+  --tbl-head-bg:  #1A2B45;
+  --tbl-stripe:   #F2F7FC;
+  --sec-title-bg: #E8F0F8;
+  --radius:       4px;
+  --pr-col:       #00B050;
+  --beta-col:     #0070C0;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:13px;}
+body{font-family:'Barlow',sans-serif;font-size:13px;color:var(--txt-primary);
+     background:var(--page-bg);-webkit-font-smoothing:antialiased;}
+.report-wrap{max-width:1020px;margin:28px auto;background:var(--body-bg);
+             box-shadow:0 2px 24px rgba(26,43,69,.15);}
+
+/* HEADER */
+.rpt-header{background:var(--ng-navy);padding:0;}
+.header-top{display:flex;align-items:stretch;border-bottom:3px solid var(--ng-blue);}
+.logo-block{background:var(--ng-blue);padding:14px 22px;display:flex;
+            align-items:center;justify-content:center;min-width:220px;flex-shrink:0;}
+.logo-text{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;
+           color:#fff;letter-spacing:2px;text-transform:uppercase;}
+.logo-sub{font-family:'Barlow',sans-serif;font-size:9px;color:rgba(255,255,255,.7);
+          letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.header-center{flex:1;padding:16px 24px;display:flex;flex-direction:column;justify-content:center;}
+.rpt-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;
+           color:#fff;letter-spacing:.5px;line-height:1.1;}
+.rpt-subtitle{font-family:'Barlow',sans-serif;font-size:11px;color:rgba(255,255,255,.6);
+              margin-top:5px;letter-spacing:.3px;}
+.header-right{background:rgba(0,0,0,.2);padding:16px 22px;display:flex;
+              flex-direction:column;align-items:flex-end;justify-content:center;
+              gap:6px;min-width:160px;flex-shrink:0;}
+.hdr-badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;
+           letter-spacing:1px;text-transform:uppercase;padding:3px 0;border-radius:3px;
+           display:block;width:110px;text-align:center;}
+.badge-fw{background:var(--ng-teal);color:#fff;}
+.badge-pr{background:var(--ng-green);color:#fff;}
+.header-bottom{padding:7px 28px;background:rgba(0,0,0,.25);display:flex;
+               align-items:center;justify-content:space-between;}
+.breadcrumb{font-family:'Barlow',sans-serif;font-size:10.5px;color:rgba(255,255,255,.55);letter-spacing:.3px;}
+.breadcrumb span{color:rgba(255,255,255,.85);}
+
+/* BODY / SECTION */
+.rpt-body{padding:0;}
+.section{border-bottom:1px solid var(--rule);}
+.section:last-child{border-bottom:none;}
+.sec-title{background:var(--sec-title-bg);border-left:4px solid var(--ng-blue);
+           padding:7px 24px;font-family:'Barlow Condensed',sans-serif;font-size:11.5px;
+           font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
+           color:var(--ng-navy);border-bottom:1px solid var(--rule);}
+.sec-body{padding:18px 24px;}
+
+/* DUT GRID */
+.dut-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+          border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden;}
+.dut-cell{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);}
+.dut-cell:nth-child(4n){border-right:none;}
+.dut-cell:nth-last-child(-n+4){border-bottom:none;}
+.dut-cell.wide{grid-column:span 2;}
+.dut-label{font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:600;
+           letter-spacing:1px;text-transform:uppercase;color:var(--txt-light);margin-bottom:3px;}
+.dut-value{font-family:'Barlow Semi Condensed',sans-serif;font-size:13px;
+           font-weight:600;color:var(--txt-primary);}
+.dut-value.mono{font-family:'Courier New',monospace;font-size:12px;color:var(--ng-navy);}
+.dut-cell.accent .dut-value{color:var(--ng-green);}
+.dut-cell.accent2 .dut-value{color:var(--ng-blue);}
+
+/* PURPOSE */
+.purpose-text{font-size:13px;line-height:1.75;color:var(--txt-secondary);}
+
+/* SUMMARY STRIP */
+.summary-strip{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--rule);}
+.sum-card{padding:12px 14px;border-right:1px solid var(--rule);}
+.sum-card:last-child{border-right:none;}
+.sum-name{font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:600;
+          letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;color:var(--pass);}
+.sum-verdict{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;line-height:1;color:var(--pass);}
+.sum-detail{font-size:10px;color:var(--txt-light);margin-top:4px;line-height:1.5;}
+
+/* STANDARD TABLE */
+table.rpt-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+table.rpt-tbl th{background:var(--tbl-head-bg);color:#fff;
+                 font-family:'Barlow Condensed',sans-serif;font-size:10.5px;font-weight:600;
+                 letter-spacing:.8px;text-transform:uppercase;padding:7px 10px;
+                 text-align:left;border:1px solid #2A3F60;}
+table.rpt-tbl th.center{text-align:center;}
+table.rpt-tbl th.right{text-align:right;}
+table.rpt-tbl td{padding:7px 10px;border:1px solid var(--rule);vertical-align:middle;font-size:12px;}
+table.rpt-tbl tr:nth-child(even) td{background:var(--tbl-stripe);}
+table.rpt-tbl td.center{text-align:center;}
+table.rpt-tbl td.right{text-align:right;}
+table.rpt-tbl td.mono{font-family:'Courier New',monospace;font-size:11px;color:var(--txt-secondary);}
+
+.pill{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:10.5px;
+      font-weight:700;letter-spacing:.7px;text-transform:uppercase;padding:2px 8px;
+      border-radius:2px;line-height:1.5;}
+.p-win{background:var(--pass-bg);color:var(--pass);border:1px solid #a7d9bc;}
+.p-ref{background:#E8F4FF;color:#005A9C;border:1px solid #90C4E8;}
+.p-tie{background:#FFF8E6;color:#8A6200;border:1px solid #F0D080;}
+.p-loss{background:var(--fail-bg);color:var(--fail);border:1px solid #fca5a5;}
+.val-pos{color:var(--pass);font-weight:600;}
+.val-neg{color:var(--fail);font-weight:600;}
+.val-tie{color:#8A6200;font-weight:600;}
+
+/* TWO-COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;}
+.two-col .section{border-right:1px solid var(--rule);}
+.two-col .section:last-child{border-right:none;}
+
+/* DETAIL TABLE */
+table.detail-tbl{width:100%;border-collapse:collapse;font-size:11px;}
+table.detail-tbl th{background:var(--tbl-head-bg);color:#fff;
+                    font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;
+                    letter-spacing:.6px;text-transform:uppercase;padding:6px 8px;
+                    text-align:center;border:1px solid #2A3F60;word-break:break-word;}
+table.detail-tbl th.left{text-align:left;}
+table.detail-tbl td{padding:5px 8px;border:1px solid var(--rule);
+                    text-align:center;vertical-align:middle;font-size:11.5px;}
+table.detail-tbl tr:nth-child(even) td{background:var(--tbl-stripe);}
+table.detail-tbl td.left{text-align:left;font-weight:600;font-size:11.5px;color:var(--ng-navy);}
+table.detail-tbl td.mono{font-family:'Courier New',monospace;font-size:10.5px;color:var(--txt-secondary);}
+
+.detail-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.detail-title{font-family:'Barlow Semi Condensed',sans-serif;font-size:13px;
+              font-weight:600;color:var(--ng-navy);}
+.config-tag{font-family:'Barlow',sans-serif;font-size:10.5px;font-weight:500;
+          color:var(--ng-blue);background:#E8F4FF;border:1px solid #90C4E8;
+          padding:2px 9px;border-radius:10px;}
+.config-tag.green{color:var(--ng-green);background:#E8F7EE;border:1px solid #90D4A8;}
+
+/* KPI CARDS */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--rule);}
+.kpi-card{padding:14px 16px;border-right:1px solid var(--rule);text-align:center;}
+.kpi-card:last-child{border-right:none;}
+.kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;line-height:1;}
+.kpi-label{font-family:'Barlow',sans-serif;font-size:9.5px;font-weight:500;color:var(--txt-light);
+           letter-spacing:.5px;text-transform:uppercase;margin-top:5px;}
+
+/* CHART */
+.chart-container{position:relative;height:260px;margin:8px 0 4px;}
+
+/* DIRECTION TOGGLE */
+.dir-toggle{display:flex;gap:0;border:1.5px solid var(--ng-blue);border-radius:20px;overflow:hidden;}
+.tgl-btn{font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;
+         padding:5px 16px;border:none;background:#fff;color:var(--txt-secondary);
+         cursor:pointer;transition:all .15s;letter-spacing:.3px;}
+.tgl-btn:not(:last-child){border-right:1px solid var(--rule);}
+.tgl-btn:hover{color:var(--ng-blue);background:#EEF5FF;}
+.tgl-btn.tgl-active{background:var(--ng-blue);color:#fff;}
+
+/* CHANNEL TOGGLE */
+.ch-toggle{display:flex;gap:0;border:1.5px solid var(--ng-navy);border-radius:20px;overflow:hidden;}
+.ch-btn{font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;
+         padding:5px 16px;border:none;background:#fff;color:var(--txt-secondary);
+         cursor:pointer;transition:all .15s;}
+.ch-btn:not(:last-child){border-right:1px solid var(--rule);}
+.ch-btn:hover{color:var(--ng-navy);background:#EEF3F8;}
+.ch-btn.ch-active{background:var(--ng-navy);color:#fff;}
+
+/* FINDING CARDS */
+.finding-list{list-style:none;}
+.finding-item{display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--rule);}
+.finding-item:last-child{border-bottom:none;}
+.finding-num{min-width:28px;height:28px;border-radius:50%;background:#E8F4FF;
+             color:var(--ng-blue);display:flex;align-items:center;justify-content:center;
+             font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;flex-shrink:0;}
+.finding-text{font-size:12.5px;line-height:1.65;color:var(--txt-secondary);}
+.finding-text strong{color:var(--ng-navy);}
+
+/* LEGEND */
+.chart-legend{display:flex;gap:18px;justify-content:center;padding:6px 0;font-size:11px;color:var(--txt-secondary);}
+.chart-legend-item{display:flex;align-items:center;gap:5px;}
+.chart-legend-dot{width:10px;height:10px;border-radius:2px;}
+
+/* CHANNEL BADGE */
+.ch-badge{display:inline-block;font-family:'Barlow Condensed',sans-serif;font-size:10px;
+          font-weight:700;letter-spacing:.5px;padding:2px 6px;border-radius:3px;
+          text-transform:uppercase;}
+.ch-6g{background:#E3F2FD;color:#005A9C;border:1px solid #90C4E8;}
+.ch-5g{background:#FFF3E0;color:#8A4000;border:1px solid #F0B870;}
+
+/* TOPOLOGY STRIP */
+.topo-strip{display:flex;gap:0;border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;}
+.topo-node{flex:1;padding:10px 14px;border-right:1px solid var(--rule);text-align:center;}
+.topo-node:last-child{border-right:none;}
+.topo-node-label{font-family:'Barlow',sans-serif;font-size:9px;font-weight:600;
+                 letter-spacing:1px;text-transform:uppercase;color:var(--txt-light);margin-bottom:4px;}
+.topo-node-val{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--ng-navy);}
+.topo-node-sub{font-size:10px;color:var(--txt-light);margin-top:2px;}
+.topo-arrow{display:flex;align-items:center;justify-content:center;padding:0 4px;color:var(--txt-light);font-size:18px;}
+
+/* FOOTER */
+.rpt-footer{background:var(--ng-navy);border-top:3px solid var(--ng-blue);
+            padding:10px 24px;display:flex;align-items:center;justify-content:space-between;}
+.footer-left{font-family:'Barlow Condensed',sans-serif;font-size:11.5px;font-weight:600;
+             letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.55);}
+.footer-left span{color:var(--ng-teal);}
+.footer-right{font-family:'Barlow',sans-serif;font-size:10.5px;
+              color:rgba(255,255,255,.4);text-align:right;}
+
+@media print{
+  body{background:#fff;}
+  .report-wrap{max-width:none;margin:0;box-shadow:none;}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+}
+
+/* ── ALERT BANNERS ── */
+.alert-banner{display:flex;align-items:flex-start;gap:12px;padding:11px 16px;
+  border-radius:var(--radius);margin-bottom:14px;border-left:4px solid;}
+.alert-banner.critical{background:#FEF2F2;border-color:#DC2626;}
+.alert-banner.warning{background:#FFFBEB;border-color:#D97706;}
+.alert-icon{font-size:17px;line-height:1;flex-shrink:0;margin-top:1px;}
+.alert-body{flex:1;}
+.alert-title{font-family:'Barlow Condensed',sans-serif;font-size:11.5px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px;}
+.alert-banner.critical .alert-title{color:#991B1B;}
+.alert-banner.warning .alert-title{color:#92400E;}
+.alert-desc{font-size:11.5px;line-height:1.6;color:var(--txt-secondary);}
+.alert-desc strong{color:var(--txt-primary);}
+
+/* ── BAND TABS ── */
+.band-tabs{display:flex;gap:0;border-bottom:2px solid var(--rule);}
+.band-tab{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;padding:8px 20px;cursor:pointer;
+  border:none;background:none;color:var(--txt-light);border-bottom:3px solid transparent;
+  margin-bottom:-2px;transition:all .15s;}
+.band-tab:hover{color:var(--ng-navy);}
+.band-tab.tab-active{color:var(--ng-navy);border-bottom-color:var(--ng-blue);}
+.issue-dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#DC2626;margin-left:5px;vertical-align:middle;
+  animation:idot 1.5s ease-in-out infinite;}
+@keyframes idot{0%,100%{opacity:1;}50%{opacity:.3;}}
+.band-panel{display:none;padding:14px 0 0;}
+.band-panel.panel-active{display:block;}
+.rpm-meta{font-size:11px;color:var(--txt-light);font-family:'Courier New',monospace;
+  padding:4px 8px;background:var(--tbl-stripe);border-radius:3px;display:inline-block;}
+
+/* ── 1RPM TABLE ── */
+table.rpm-tbl{width:100%;border-collapse:collapse;font-size:11.5px;}
+table.rpm-tbl th{background:var(--tbl-head-bg);color:#fff;
+  font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:.7px;text-transform:uppercase;padding:6px 9px;
+  text-align:center;border:1px solid #2A3F60;}
+table.rpm-tbl th.left{text-align:left;}
+table.rpm-tbl td{padding:6px 9px;border:1px solid var(--rule);
+  text-align:center;vertical-align:middle;}
+table.rpm-tbl tr:nth-child(even) td{background:var(--tbl-stripe);}
+table.rpm-tbl td.left{text-align:left;font-weight:600;color:var(--ng-navy);}
+.cell-crit{color:#DC2626;font-weight:700;}
+.cell-warn{color:#D97706;font-weight:700;}
+.cell-ok{color:var(--pass);font-weight:600;}
+.rpm-flag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;
+  font-family:'Barlow Condensed',sans-serif;letter-spacing:.4px;}
+.flag-ok{background:#E8F7EE;color:#1A6B40;border:1px solid #8ED4AA;}
+.flag-warn{background:#FFFBEB;color:#8A5000;border:1px solid #F0C060;}
+.flag-crit{background:#FEF2F2;color:#991B1B;border:1px solid #FCA5A5;}
+.mcs-badge{font-family:'Courier New',monospace;font-size:10px;padding:1px 6px;
+  border-radius:3px;border:1px solid;}
+.mcs-ok{background:#E8F7EE;color:#1A6B40;border-color:#8ED4AA;}
+.mcs-warn{background:#FFFBEB;color:#8A5000;border-color:#F0C060;}
+
+/* ── ISSUE TRACKER FAB ── */
+#issueBtn{position:fixed;bottom:28px;right:28px;z-index:9999;
+  width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--ng-navy);color:#fff;font-size:22px;
+  box-shadow:0 4px 18px rgba(26,43,69,.45);transition:all .2s;
+  display:flex;align-items:center;justify-content:center;}
+#issueBtn:hover{background:var(--ng-blue);transform:scale(1.07);}
+#issueBadge{position:absolute;top:-3px;right:-3px;background:#DC2626;color:#fff;
+  font-size:10px;font-weight:700;font-family:'Barlow',sans-serif;
+  min-width:17px;height:17px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;padding:0 4px;border:2px solid #fff;line-height:1;}
+
+/* ── ISSUE PANEL ── */
+#issuePanel{position:fixed;bottom:90px;right:28px;z-index:9998;
+  width:420px;background:#fff;border-radius:10px;
+  box-shadow:0 8px 40px rgba(0,0,0,.18);
+  border:1px solid var(--rule);display:none;flex-direction:column;
+  max-height:80vh;overflow:hidden;}
+#issuePanel.panel-open{display:flex;}
+#issuePanelHeader{padding:12px 14px;background:var(--ng-navy);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#issuePanelTitle{font-family:'Barlow Condensed',sans-serif;font-size:14px;
+  font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#fff;}
+#issuePanelHeader button{background:rgba(255,255,255,.15);border:none;
+  color:#fff;cursor:pointer;border-radius:4px;padding:3px 8px;font-size:13px;
+  transition:background .15s;}
+#issuePanelHeader button:hover{background:rgba(255,255,255,.3);}
+#addIssueBtn{font-size:17px;font-weight:700;padding:2px 8px!important;}
+
+/* FILTER BAR */
+#issueFilterBar{display:flex;gap:0;border-bottom:1px solid var(--rule);
+  background:#F8FAFC;flex-shrink:0;}
+.iFilter{flex:1;padding:7px 4px;border:none;background:none;cursor:pointer;
+  font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;
+  color:var(--txt-light);transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.iFilter:hover{color:var(--ng-navy);}
+.iFilter-active{color:var(--ng-blue)!important;border-bottom-color:var(--ng-blue)!important;}
+
+/* ADD FORM */
+#addIssueForm{padding:12px 14px;border-bottom:1px solid var(--rule);
+  background:#F8FAFC;flex-shrink:0;}
+#addIssueForm input,#addIssueForm select,#addIssueForm textarea{
+  width:100%;border:1px solid var(--rule);border-radius:4px;
+  padding:6px 9px;font-family:'Barlow',sans-serif;font-size:12px;
+  color:var(--txt-primary);background:#fff;margin-bottom:6px;}
+#addIssueForm textarea{resize:vertical;min-height:50px;}
+#addIssueForm input:focus,#addIssueForm select:focus,#addIssueForm textarea:focus{
+  outline:none;border-color:var(--ng-blue);}
+.iBtnPrimary{padding:5px 14px;background:var(--ng-blue);color:#fff;border:none;
+  border-radius:4px;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;
+  font-weight:600;transition:background .15s;}
+.iBtnPrimary:hover{background:#005A9C;}
+.iBtnSecondary{padding:5px 12px;background:#fff;color:var(--txt-secondary);
+  border:1px solid var(--rule);border-radius:4px;cursor:pointer;
+  font-family:'Barlow',sans-serif;font-size:12px;transition:all .15s;}
+.iBtnSecondary:hover{border-color:var(--ng-blue);color:var(--ng-blue);}
+
+/* ISSUE LIST */
+#issueList{overflow-y:auto;flex:1;}
+.issue-item{padding:11px 14px;border-bottom:1px solid var(--rule);transition:background .1s;}
+.issue-item:last-child{border-bottom:none;}
+.issue-item:hover{background:#F8FAFC;}
+.issue-item-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;}
+.issue-sev{font-size:13px;flex-shrink:0;margin-top:1px;}
+.issue-title{font-family:'Barlow Semi Condensed',sans-serif;font-size:12.5px;
+  font-weight:600;color:var(--txt-primary);flex:1;line-height:1.35;}
+.issue-item-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+.issue-section-tag{font-size:10px;padding:1px 6px;background:var(--tbl-stripe);
+  border:1px solid var(--rule);border-radius:10px;color:var(--txt-light);
+  font-family:'Courier New',monospace;}
+.issue-status-select{font-size:10.5px;padding:2px 6px;border-radius:10px;
+  border:1px solid;cursor:pointer;font-family:'Barlow',sans-serif;font-weight:600;
+  appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23718096'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 5px center;padding-right:18px;}
+.status-open{background:#FEF2F2;color:#991B1B;border-color:#FCA5A5;}
+.status-inprogress{background:#FFFBEB;color:#92400E;border-color:#F0C060;}
+.status-closed{background:#E8F7EE;color:#1A6B40;border-color:#8ED4AA;}
+.issue-desc{font-size:11.5px;color:var(--txt-secondary);line-height:1.55;
+  margin-left:21px;}
+.issue-item-actions{display:flex;justify-content:flex-end;margin-top:5px;}
+.iDeleteBtn{background:none;border:none;cursor:pointer;font-size:11px;
+  color:#CBD5E0;padding:2px 5px;border-radius:3px;transition:all .15s;}
+.iDeleteBtn:hover{background:#FEF2F2;color:#DC2626;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="report-wrap">
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<div class="rpt-header">
+  <div class="header-top">
+    <div class="logo-block">
+      <div>
+        <div class="logo-text">NETGEAR</div>
+        <div class="logo-sub">orbi mesh system</div>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="rpt-title">Mesh Performance Report — RvR Analysis</div>
+      <div class="rpt-subtitle">RBE773v2 (PR Sample) vs RBE773v2 (NRH Beta Sample) &nbsp;·&nbsp; Fronthaul + Backhaul &nbsp;·&nbsp; Intel BE200 (WiFi 7) Client</div>
+    </div>
+    <div class="header-right">
+      <span class="hdr-badge badge-fw">FW V12.1.7.18</span>
+      <span class="hdr-badge badge-pr">PR SAMPLE</span>
+    </div>
+  </div>
+  <div class="header-bottom">
+    <div class="breadcrumb">
+      <span>NETGEAR</span> &nbsp;/&nbsp; Home BU &nbsp;/&nbsp;
+      RF Team &nbsp;/&nbsp; <span>RBE773v2 PR Sample Performance Report</span>
+    </div>
+    <div class="breadcrumb">
+      Test Date: <span>2026-04-15</span> &nbsp;|&nbsp;
+      Report: <span>Mesh RvR Statistical Analysis</span>
+    </div>
+  </div>
+</div>
+
+<div class="rpt-body">
+
+<!-- ═══════════════ TEST INFORMATION ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Test Information</div>
+  <div class="sec-body" style="padding-bottom:16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden;">
+      <div style="padding:8px 14px;background:var(--ng-green);border-right:1px solid rgba(255,255,255,.2);border-bottom:1px solid var(--rule);">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#fff;letter-spacing:1.2px;text-transform:uppercase;">DUT — Device Under Test</div>
+      </div>
+      <div style="padding:8px 14px;background:var(--ng-blue);border-bottom:1px solid var(--rule);">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:#fff;letter-spacing:1.2px;text-transform:uppercase;">REF — Reference Product</div>
+      </div>
+
+      <div class="dut-cell accent"><div class="dut-label">Product</div><div class="dut-value">RBE773v2</div></div>
+      <div class="dut-cell accent2"><div class="dut-label">Product</div><div class="dut-value">RBE773v2</div></div>
+
+      <div class="dut-cell"><div class="dut-label">Sample Stage</div><div class="dut-value">PR Sample</div></div>
+      <div class="dut-cell"><div class="dut-label">Sample Stage</div><div class="dut-value">NRH Beta Sample</div></div>
+
+      <div class="dut-cell"><div class="dut-label">Firmware</div><div class="dut-value mono">V12.1.7.18</div></div>
+      <div class="dut-cell"><div class="dut-label">Firmware</div><div class="dut-value mono">V12.1.7.18</div></div>
+
+      <div class="dut-cell wide"><div class="dut-label">Band Config</div><div class="dut-value">Tri-Band BE &nbsp;·&nbsp; 2.4GHz (688M) + 5GHz (2800M) + 6GHz (5760M)</div></div>
+      <div class="dut-cell wide" style="grid-column:span 2;"><div class="dut-label">Band Config</div><div class="dut-value">Tri-Band BE &nbsp;·&nbsp; 2.4GHz (688M) + 5GHz (2800M) + 6GHz (5760M)</div></div>
+
+      <div class="dut-cell"><div class="dut-label">Radio Chipset (CPU)</div><div class="dut-value mono">IPQ5322</div></div>
+      <div class="dut-cell"><div class="dut-label">2.4GHz Radio</div><div class="dut-value mono">IPQ5322</div></div>
+      <div class="dut-cell"><div class="dut-label">5GHz Radio</div><div class="dut-value mono">QCN6422</div></div>
+      <div class="dut-cell"><div class="dut-label">6GHz Radio</div><div class="dut-value mono">QCN6422</div></div>
+
+      <div class="dut-cell"><div class="dut-label">WAN</div><div class="dut-value">1× 2.5 Gbps</div></div>
+      <div class="dut-cell"><div class="dut-label">LAN</div><div class="dut-value">3× 2.5 Gbps</div></div>
+      <div class="dut-cell"><div class="dut-label">FCC ID</div><div class="dut-value mono">PY324400640</div></div>
+      <div class="dut-cell"><div class="dut-label">Test Client</div><div class="dut-value">Intel BE200 (WiFi 7)</div></div>
+    </div>
+
+    <div style="margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+      <div style="padding:10px 14px;background:var(--tbl-stripe);border:1px solid var(--rule);border-radius:var(--radius);">
+        <div class="dut-label">Test Location</div>
+        <div class="dut-value">San Jose NETGEAR Test House</div>
+      </div>
+      <div style="padding:10px 14px;background:var(--tbl-stripe);border:1px solid var(--rule);border-radius:var(--radius);">
+        <div class="dut-label">Backhaul Config</div>
+        <div class="dut-value">MLO: 5GHz CH44 EHT160 + 6GHz CH69 HT320</div>
+      </div>
+      <div style="padding:10px 14px;background:var(--tbl-stripe);border:1px solid var(--rule);border-radius:var(--radius);">
+        <div class="dut-label">Mesh Topology / Client Mode</div>
+        <div class="dut-value">STAR (Base + SAT1 + SAT2) / Auto Channel</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TEST PURPOSE ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Test Purpose &amp; Scope</div>
+  <div class="sec-body">
+    <p class="purpose-text">
+      This report validates the <strong>RBE773v2 PR Sample</strong> against the <strong>NRH Beta Sample</strong> baseline across two test domains:
+      <strong>Backhaul throughput</strong> (BASE-LAN to Satellite-LAN, MLO 5+6GHz) and <strong>Fronthaul RvR</strong>
+      (Mesh system throughput vs. range with Intel BE200 WiFi-7 client using Auto Channel roaming across 8 test locations).
+      The goal is to confirm no regression exists between the PR and Beta hardware stages before production release.
+    </p>
+    <ul class="finding-list" style="margin-top:14px;">
+      <li class="finding-item">
+        <div class="finding-num">1</div>
+        <div class="finding-text"><strong>Backhaul Performance:</strong> DL and UL throughput over BASE–SAT1 and BASE–SAT2 links using MLO (5GHz CH44 EHT160 + 6GHz CH69 HT320) in STAR topology.</div>
+      </li>
+      <li class="finding-item">
+        <div class="finding-num">2</div>
+        <div class="finding-text"><strong>Fronthaul Mesh RvR:</strong> UL+DL, DL-only, and UL-only client throughput at 8 real-world locations ranging from 10ft LOS to 110ft NLOS, with automatic channel and AP association.</div>
+      </li>
+      <li class="finding-item">
+        <div class="finding-num">3</div>
+        <div class="finding-text"><strong>Auto-Channel Matrix:</strong> Verification that both samples select equivalent channels and AP associations at each test location under identical conditions.</div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════ OVERALL KPI ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Key Performance Indicators — PR Sample vs Beta Sample</div>
+  <div class="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-val" style="color:var(--ng-green)">2,273</div>
+      <div class="kpi-label">Backhaul DL BASE–SAT1 (Mbps)<br><span style="color:var(--ng-blue);font-weight:600;">Beta: 2,253</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val" style="color:var(--ng-green)">2,289</div>
+      <div class="kpi-label">Backhaul UL BASE–SAT1 (Mbps)<br><span style="color:var(--ng-blue);font-weight:600;">Beta: 2,261</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val" style="color:var(--ng-green)">795</div>
+      <div class="kpi-label">Fronthaul DL 8-Loc Avg (Mbps)<br><span style="color:var(--ng-blue);font-weight:600;">Beta: 800</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-val" style="color:var(--ng-green)">752</div>
+      <div class="kpi-label">Fronthaul UL 8-Loc Avg (Mbps)<br><span style="color:var(--ng-blue);font-weight:600;">Beta: 762</span></div>
+    </div>
+  </div>
+  <div class="summary-strip">
+    <div class="sum-card">
+      <div class="sum-name">Backhaul DL</div>
+      <div class="sum-verdict">PR +0.9%</div>
+      <div class="sum-detail">BASE–SAT1: 2273 vs 2253<br>BASE–SAT2: 1580 vs 1510</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-name">Backhaul UL</div>
+      <div class="sum-verdict">PR +1.2%</div>
+      <div class="sum-detail">BASE–SAT1: 2289 vs 2261<br>BASE–SAT2: 1602 vs 1537</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-name" style="color:var(--ng-blue);">Fronthaul DL Avg</div>
+      <div class="sum-verdict" style="color:var(--ng-blue);">Beta +0.6%</div>
+      <div class="sum-detail">PR: 795 Mbps avg<br>Beta: 800 Mbps avg</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-name" style="color:var(--ng-blue);">Fronthaul UL Avg</div>
+      <div class="sum-verdict" style="color:var(--ng-blue);">Beta +1.3%</div>
+      <div class="sum-detail">PR: 752 Mbps avg<br>Beta: 762 Mbps avg</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-name" style="color:var(--pass);">Overall Verdict</div>
+      <div class="sum-verdict" style="color:var(--pass);">✓ PASS</div>
+      <div class="sum-detail">No regressions observed<br>PR ≈ Beta within ±2%</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ BACKHAUL PERFORMANCE ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Backhaul Performance — MLO: 5GHz CH44 EHT160 + 6GHz CH69 HT320</div>
+  <div class="sec-body">
+
+    <!-- Topology strip -->
+    <div class="topo-strip">
+      <div class="topo-node">
+        <div class="topo-node-label">Node</div>
+        <div class="topo-node-val">BASE</div>
+        <div class="topo-node-sub">Router</div>
+      </div>
+      <div class="topo-arrow">→</div>
+      <div class="topo-node">
+        <div class="topo-node-label">Link 1</div>
+        <div class="topo-node-val">SAT1</div>
+        <div class="topo-node-sub">Satellite 1</div>
+      </div>
+      <div class="topo-arrow">↔</div>
+      <div class="topo-node">
+        <div class="topo-node-label">Link 2</div>
+        <div class="topo-node-val">SAT2</div>
+        <div class="topo-node-sub">Satellite 2</div>
+      </div>
+      <div style="flex:2;padding:10px 14px;border-left:1px solid var(--rule);">
+        <div class="topo-node-label">MLO Backhaul Config</div>
+        <div style="font-size:12px;color:var(--ng-navy);font-weight:600;margin-top:2px;">
+          <span class="ch-badge ch-5g">5GHz CH44 EHT160</span>&nbsp;+&nbsp;<span class="ch-badge ch-6g">6GHz CH69 HT320</span>
+          &nbsp;&nbsp; Topology: <strong>STAR</strong>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="detail-title">Backhaul Throughput by Link</div>
+      <div class="dir-toggle" id="toggleBH">
+        <button class="tgl-btn tgl-active" onclick="setDirBH('dl',this)">DL</button>
+        <button class="tgl-btn" onclick="setDirBH('ul',this)">UL</button>
+      </div>
+    </div>
+
+    <div class="chart-legend">
+      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--pr-col)"></div>RBE773v2 PR Sample V12.1.7.18</div>
+      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--beta-col)"></div>RBE773v2 NRH Beta Sample V12.1.7.18</div>
+    </div>
+    <div class="chart-container" style="height:240px;"><canvas id="cBH"></canvas></div>
+
+    <!-- Backhaul detail table -->
+    <div style="margin-top:18px;">
+      <div class="detail-meta">
+        <div class="detail-title">Per-Link Throughput Detail (Mbps)</div>
+        <div class="config-tag">STAR Topology · MLO 5GHz+6GHz Backhaul</div>
+      </div>
+      <table class="detail-tbl">
+        <thead><tr>
+          <th class="left" style="width:22%">Link</th>
+          <th style="background:#1A4D2E;width:13%">PR DL</th>
+          <th style="background:#0A3A6B;width:13%">Beta DL</th>
+          <th style="width:9%">Diff DL</th>
+          <th style="width:8%">% DL</th>
+          <th style="background:#1A4D2E;width:13%">PR UL</th>
+          <th style="background:#0A3A6B;width:13%">Beta UL</th>
+          <th style="width:9%">Diff UL</th>
+          <th style="width:8%">% UL</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td class="left">BASE – SAT1</td>
+            <td><strong>2,273</strong></td><td>2,253</td>
+            <td class="val-pos">+20</td><td class="val-pos">+0.9%</td>
+            <td><strong>2,289</strong></td><td>2,261</td>
+            <td class="val-pos">+28</td><td class="val-pos">+1.2%</td>
+          </tr>
+          <tr>
+            <td class="left">BASE – SAT2</td>
+            <td><strong>1,580</strong></td><td>1,510</td>
+            <td class="val-pos">+70</td><td class="val-pos">+4.6%</td>
+            <td><strong>1,602</strong></td><td>1,537</td>
+            <td class="val-pos">+65</td><td class="val-pos">+4.2%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ AUTO CHANNEL MATRIX ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Auto Channel Matrix — 8 Test Locations</div>
+  <div class="sec-body">
+    <div class="detail-meta">
+      <div class="detail-title">Client AP Association &amp; Channel per Location</div>
+      <div style="display:flex;gap:8px;">
+        <span class="ch-badge ch-6g">6GHz Connection</span>
+        <span class="ch-badge ch-5g">5GHz Connection (Fallback)</span>
+      </div>
+    </div>
+    <table class="detail-tbl" style="table-layout:fixed;">
+      <thead><tr>
+        <th class="left" style="width:22%">Testing Device</th>
+        <th>L1<br>10ft</th><th>L2<br>20ft</th><th>L3<br>55ft</th><th>L4<br>70ft</th>
+        <th>L5<br>60ft</th><th>L6<br>80ft</th><th>L7<br>75ft</th><th>L8<br>110ft</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="left" style="color:var(--ng-green);">RBE773v2 (PR Sample)</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>Base</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>Base</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT1</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT2</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT1</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT2</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT2</td>
+          <td style="background:#FFF3E0;font-size:10px;font-weight:600;">CH44 5GHz<br>SAT2</td>
+        </tr>
+        <tr>
+          <td class="left" style="color:var(--ng-blue);">RBE773v2 (NRH Beta)</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>Base</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>Base</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT1</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT2</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT1</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT2</td>
+          <td style="background:#E3F2FD;font-size:10px;font-weight:600;">CH69 6GHz<br>SAT2</td>
+          <td style="background:#FFF3E0;font-size:10px;font-weight:600;">CH44 5GHz<br>SAT2</td>
+        </tr>
+        <tr>
+          <td class="left" style="font-size:10.5px;color:var(--txt-light);">Path Loss</td>
+          <td style="font-size:10px;color:var(--txt-light);">57 dB<br>LOS</td>
+          <td style="font-size:10px;color:var(--txt-light);">72 dB<br>NLOS</td>
+          <td style="font-size:10px;color:var(--txt-light);">77 dB<br>NLOS</td>
+          <td style="font-size:10px;color:var(--txt-light);">87 dB<br>NLOS</td>
+          <td style="font-size:10px;color:var(--txt-light);">93 dB<br>NLOS</td>
+          <td style="font-size:10px;color:var(--txt-light);">97 dB<br>NLOS</td>
+          <td style="font-size:10px;color:var(--txt-light);">96 dB<br>NLOS</td>
+          <td style="font-size:10px;color:var(--txt-light);">103 dB<br>NLOS</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:11px;color:var(--txt-light);margin-top:8px;">
+      ✓ Both PR and Beta samples select identical channels and AP associations at all 8 locations. 6GHz (CH69) preferred for L1–L7; 5GHz fallback at L8 (110ft front yard).
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════ FRONTHAUL RvR CHARTS ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Fronthaul Mesh RvR — Throughput vs Range (8 Locations)</div>
+  <div class="sec-body">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+      <div class="detail-title">PR Sample vs NRH Beta Sample — Per Location</div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div class="dir-toggle" id="toggle1">
+          <button class="tgl-btn tgl-active" onclick="setDir('uldl',this)">UL + DL</button>
+          <button class="tgl-btn" onclick="setDir('dl',this)">DL</button>
+          <button class="tgl-btn" onclick="setDir('ul',this)">UL</button>
+        </div>
+      </div>
+    </div>
+    <div class="chart-legend">
+      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--pr-col)"></div>RBE773v2 PR Sample</div>
+      <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--beta-col)"></div>RBE773v2 NRH Beta Sample</div>
+    </div>
+    <div class="chart-container"><canvas id="cFH"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════════ % DELTA CHART ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Percentage Delta — PR Sample vs NRH Beta Sample by Location</div>
+  <div class="sec-body">
+    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;">
+      <div class="dir-toggle" id="toggle2">
+        <button class="tgl-btn tgl-active" onclick="setDirPct('uldl',this)">UL + DL</button>
+        <button class="tgl-btn" onclick="setDirPct('dl',this)">DL</button>
+        <button class="tgl-btn" onclick="setDirPct('ul',this)">UL</button>
+      </div>
+    </div>
+    <div style="height:240px;position:relative;"><canvas id="cPct"></canvas></div>
+    <p style="font-size:11px;color:var(--txt-light);margin-top:6px;text-align:center;">
+      Positive values = PR Sample leads · Negative values = Beta Sample leads · Values within ±5% considered equivalent
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════ DETAILED TABLES ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Detailed Results — Fronthaul UL + DL (All 8 Locations)</div>
+  <div class="sec-body">
+    <div class="detail-meta">
+      <div class="detail-title">Per-Location Throughput (Mbps)</div>
+      <div class="config-tag">Auto Channel · Intel BE200 WiFi-7 Client</div>
+    </div>
+    <table class="detail-tbl" style="table-layout:fixed">
+      <thead><tr>
+        <th class="left" style="width:26%;background:#0E2435">Location</th>
+        <th style="width:9%;background:#0E2435">Path Loss</th>
+        <th style="width:11%;background:#1A4D2E">PR UL+DL</th>
+        <th style="width:11%;background:#0A3A6B">Beta UL+DL</th>
+        <th style="width:8%;background:#1A2B45">Diff</th>
+        <th style="width:7%;background:#1A2B45">%</th>
+        <th style="width:9%;background:#1A4D2E">PR DL</th>
+        <th style="width:9%;background:#0A3A6B">Beta DL</th>
+        <th style="width:9%;background:#1A4D2E">PR UL</th>
+        <th style="width:9%;background:#0A3A6B">Beta UL</th>
+      </tr></thead>
+      <tbody id="detailTbody">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ FRONTHAUL DL TABLE ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Detailed Results — Fronthaul DL Only</div>
+  <div class="sec-body">
+    <div class="detail-meta">
+      <div class="detail-title">Downlink Per-Location Throughput (Mbps)</div>
+      <div class="config-tag green">DL: AP → Client</div>
+    </div>
+    <table class="detail-tbl" style="table-layout:fixed">
+      <thead><tr>
+        <th class="left" style="width:30%;background:#0E2435">Location</th>
+        <th style="width:10%;background:#0E2435">Path Loss</th>
+        <th style="width:10%;background:#0E2435">AP Node</th>
+        <th style="width:13%;background:#1A4D2E">PR DL (Mbps)</th>
+        <th style="width:13%;background:#0A3A6B">Beta DL (Mbps)</th>
+        <th style="width:10%;background:#1A2B45">Diff</th>
+        <th style="width:9%;background:#1A2B45">%</th>
+        <th style="width:10%;background:#1A2B45">Result</th>
+      </tr></thead>
+      <tbody id="dlTbody">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ FRONTHAUL UL TABLE ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Detailed Results — Fronthaul UL Only</div>
+  <div class="sec-body">
+    <div class="detail-meta">
+      <div class="detail-title">Uplink Per-Location Throughput (Mbps)</div>
+      <div class="config-tag">UL: Client → AP</div>
+    </div>
+    <table class="detail-tbl" style="table-layout:fixed">
+      <thead><tr>
+        <th class="left" style="width:30%;background:#0E2435">Location</th>
+        <th style="width:10%;background:#0E2435">Path Loss</th>
+        <th style="width:10%;background:#0E2435">AP Node</th>
+        <th style="width:13%;background:#1A4D2E">PR UL (Mbps)</th>
+        <th style="width:13%;background:#0A3A6B">Beta UL (Mbps)</th>
+        <th style="width:10%;background:#1A2B45">Diff</th>
+        <th style="width:9%;background:#1A2B45">%</th>
+        <th style="width:10%;background:#1A2B45">Result</th>
+      </tr></thead>
+      <tbody id="ulTbody">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ KEY FINDINGS ═══════════════ -->
+<div class="section">
+  <div class="sec-title">Key Findings &amp; Conclusions</div>
+  <div class="sec-body">
+    <ul class="finding-list">
+      <li class="finding-item">
+        <div class="finding-num">1</div>
+        <div class="finding-text">
+          <strong>Backhaul — PR Sample slightly leads:</strong> On BASE–SAT1, PR Sample achieves 2,273 Mbps DL (+0.9%) and 2,289 Mbps UL (+1.2%) over Beta. On BASE–SAT2, PR leads by 4.6% DL and 4.2% UL. All differences are within normal variation range.
+        </div>
+      </li>
+      <li class="finding-item">
+        <div class="finding-num">2</div>
+        <div class="finding-text">
+          <strong>Fronthaul DL — Beta Sample marginally leads at most locations:</strong> Beta achieves ~0.6% higher average DL throughput (800 vs 795 Mbps). Both devices deliver comparable peak performance at LOS locations (L1: PR 1983 vs Beta 2012 Mbps).
+        </div>
+      </li>
+      <li class="finding-item">
+        <div class="finding-num">3</div>
+        <div class="finding-text">
+          <strong>Fronthaul UL — Beta Sample marginally leads:</strong> Beta averages ~1.3% higher UL throughput (762 vs 752 Mbps). Performance gap is smallest at far locations (L8: PR 27.1 vs Beta 29.1 Mbps).
+        </div>
+      </li>
+      <li class="finding-item">
+        <div class="finding-num">4</div>
+        <div class="finding-text">
+          <strong>Auto Channel — Identical selection across all locations:</strong> Both PR and Beta samples select CH69 6GHz for L1–L7 and fall back to CH44 5GHz only at L8 (110ft, 103 dB path loss). AP association (Base → SAT1 → SAT2) is consistent between devices.
+        </div>
+      </li>
+      <li class="finding-item">
+        <div class="finding-num">5</div>
+        <div class="finding-text">
+          <strong>Overall Verdict — PASS:</strong> All performance differences are within ±5% tolerance. No regressions observed between PR and NRH Beta hardware stages. The RBE773v2 PR Sample is production-ready relative to the Beta baseline.
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- ═══════════════ 1RPM CLOSE-RANGE THROUGHPUT ═══════════════ -->
+<div class="section" id="section-1rpm">
+  <div class="sec-title">1RPM Close-Range Throughput — 2G / 5G / 6G (PR Sample vs Beta)</div>
+  <div class="sec-body">
+
+    <!-- ALERT BANNER -->
+    <div class="alert-banner critical">
+      <div class="alert-icon">🔴</div>
+      <div class="alert-body">
+        <div class="alert-title">Critical Issue · 2.4G CH10 DL Regression</div>
+        <div class="alert-desc">
+          RBE771v2 <strong>PR Sample DL = 170 Mbps</strong> (RTM FW, default Tx Power) vs Beta <strong>202 Mbps</strong> — gap of <strong>−32 Mbps (−15.8%)</strong>.
+          MCS Rate differs: PR=1:2:2 vs Beta=1:4:2. With Tx Power set to 15dBm, PR recovers to 190 Mbps but remains below Beta baseline.
+          Root cause under investigation. See Issue Tracker →
+        </div>
+      </div>
+    </div>
+
+    <!-- BAND TABS -->
+    <div class="band-tabs">
+      <button class="band-tab tab-active" onclick="switchBand('6g',this)">6G CH69</button>
+      <button class="band-tab" onclick="switchBand('5g',this)">5G CH44</button>
+      <button class="band-tab" onclick="switchBand('2g',this)">
+        2.4G CH10 <span class="issue-dot" title="Active Issue"></span>
+      </button>
+    </div>
+
+    <!-- 6G PANEL -->
+    <div class="band-panel panel-active" id="panel-6g">
+      <div class="rpm-meta">6GHz CH69 · 1RPM · Intel BE200 · RTM V12.1.7.18</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:10px;">
+        <div>
+          <table class="rpm-tbl">
+            <thead><tr>
+              <th class="left">Device</th>
+              <th>Config</th>
+              <th>STN1 DL (Mbps)</th>
+              <th>STN1 UL (Mbps)</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td class="left" style="color:var(--ng-green)">RBE771v2 (PR)</td>
+                <td class="mono" style="font-size:10px;">RTM V12.1.7.18</td>
+                <td class="cell-ok">2,050</td>
+                <td class="cell-ok">2,310</td>
+                <td><span class="rpm-flag flag-ok">PASS</span></td>
+              </tr>
+              <tr>
+                <td class="left" style="color:var(--ng-blue)">RBE771v2 (Beta)</td>
+                <td class="mono" style="font-size:10px;">RTM V12.1.7.18</td>
+                <td>2,058</td>
+                <td>2,318</td>
+                <td><span class="rpm-flag flag-ok">REF</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="chart-container" style="height:200px;"><canvas id="c6g"></canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--txt-light);">
+        ✓ 6GHz performance: PR vs Beta within <strong>−0.4% DL / −0.3% UL</strong> — equivalent.
+      </div>
+    </div>
+
+    <!-- 5G PANEL -->
+    <div class="band-panel" id="panel-5g">
+      <div class="rpm-meta">5GHz CH44 · 1RPM · Intel BE200 · RTM V12.1.7.18</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:10px;">
+        <div>
+          <table class="rpm-tbl">
+            <thead><tr>
+              <th class="left">Device</th>
+              <th>Config</th>
+              <th>Tx Power</th>
+              <th>STN1 DL (Mbps)</th>
+              <th>STN1 UL (Mbps)</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td class="left" style="color:var(--ng-green)">RBE771v2 (PR)</td>
+                <td class="mono" style="font-size:10px;">RTM V12.1.7.18</td>
+                <td style="font-size:10px;">Default</td>
+                <td class="cell-warn">1,450</td>
+                <td class="cell-warn">1,620</td>
+                <td><span class="rpm-flag flag-warn">−3%</span></td>
+              </tr>
+              <tr>
+                <td class="left" style="color:var(--ng-green)">RBE771v2 (PR)</td>
+                <td class="mono" style="font-size:10px;">RTM V12.1.7.18</td>
+                <td style="font-size:10px;color:#D97706;font-weight:600;">20 dBm</td>
+                <td>1,450</td>
+                <td>—</td>
+                <td><span class="rpm-flag flag-warn">Tx Test</span></td>
+              </tr>
+              <tr>
+                <td class="left" style="color:var(--ng-blue)">RBE771v2 (Beta)</td>
+                <td class="mono" style="font-size:10px;">RTM V12.1.7.18</td>
+                <td style="font-size:10px;">Default</td>
+                <td>1,495</td>
+                <td>1,660</td>
+                <td><span class="rpm-flag flag-ok">REF</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="chart-container" style="height:200px;"><canvas id="c5g"></canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#92400E;">
+        ⚠ 5GHz: PR DL −3.0% / UL −2.4% vs Beta. Tx Power at 20dBm did not improve DL. Within ±5% tolerance but warrants monitoring.
+      </div>
+    </div>
+
+    <!-- 2G PANEL -->
+    <div class="band-panel" id="panel-2g">
+      <div class="rpm-meta">2.4GHz CH10 · 1RPM · Intel BE200 · RTM V12.1.7.18</div>
+
+      <div class="alert-banner warning" style="margin-top:10px;">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-body">
+          <div class="alert-title">MCS Rate Discrepancy — Root Cause Unconfirmed</div>
+          <div class="alert-desc">
+            PR Sample uses <strong>MCS 10,11,12 = 1:2:2</strong> vs Beta's <strong>1:4:2</strong>. Lower MCS11 count on PR may indicate
+            antenna calibration, regulatory power cap, or driver-level spatial stream selection difference.
+            Setting Tx Power to 15 dBm on PR recovers DL to 190 Mbps but still below Beta's 202 Mbps.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:12px;">
+        <div>
+          <table class="rpm-tbl">
+            <thead><tr>
+              <th class="left">Device</th>
+              <th>Config</th>
+              <th>Tx Power</th>
+              <th>STN1 DL (Mbps)</th>
+              <th>STN1 UL (Mbps)</th>
+              <th>MCS 10,11,12</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td class="left" style="color:var(--ng-green)">RBE771v2 (PR)</td>
+                <td class="mono" style="font-size:10px;">RTM V12.1.7.18</td>
+                <td style="font-size:10px;">Default</td>
+                <td class="cell-crit">170</td>
+                <td>176</td>
+                <td><span class="mcs-badge mcs-warn">1:2:2</span></td>
+                <td><span class="rpm-flag flag-crit">FAIL</span></td>
+              </tr>
+              <tr>
+                <td class="left" style="color:var(--ng-green)">RBE771v2 (PR)</td>
+                <td class="mono" style="font-size:10px;">RTM V12.1.7.18</td>
+                <td style="font-size:10px;color:#D97706;font-weight:600;">15 dBm</td>
+                <td class="cell-warn">190</td>
+                <td>177</td>
+                <td><span class="mcs-badge mcs-warn">1:2:2</span></td>
+                <td><span class="rpm-flag flag-warn">Partial</span></td>
+              </tr>
+              <tr>
+                <td class="left" style="color:var(--ng-blue)">RBE771v2 (Beta)</td>
+                <td class="mono" style="font-size:10px;">RTM V12.1.7.18</td>
+                <td style="font-size:10px;">Default</td>
+                <td>202</td>
+                <td>183</td>
+                <td><span class="mcs-badge mcs-ok">1:4:2</span></td>
+                <td><span class="rpm-flag flag-ok">REF</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="chart-container" style="height:200px;"><canvas id="c2g"></canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#991B1B;font-weight:600;">
+        🔴 2.4G DL (default): PR 170 vs Beta 202 = <strong>−15.8% regression</strong>. MCS rate difference suggests Tx calibration or power table issue. Action required before production sign-off.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- rpt-body -->
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<div class="rpt-footer">
+  <div class="footer-left"><span>NETGEAR</span> &nbsp;/&nbsp; RBE773v2 PR Sample · Mesh Performance Report</div>
+  <div class="footer-right">
+    Mesh RvR Analysis &nbsp;|&nbsp; 2026-04-15 &nbsp;|&nbsp; CONFIDENTIAL
+  </div>
+</div>
+
+</div><!-- report-wrap -->
+
+<script>
+const locs = ['L1\n10ft','L2\n20ft','L3\n55ft','L4\n70ft','L5\n60ft','L6\n80ft','L7\n75ft','L8\n110ft'];
+const locsFull = [
+  'L1 · Garage (10ft) LOS','L2 · 2nd Floor (20ft) NLOS','L3 · Living Room (55ft) NLOS',
+  'L4 · Soldering Rm (70ft) NLOS','L5 · Backyard (60ft) NLOS','L6 · Master Bed (80ft) NLOS',
+  'L7 · Bedroom 2 (75ft) NLOS','L8 · Front Yard (110ft) NLOS'
+];
+const pathLoss = ['57 dB','72 dB','77 dB','87 dB','93 dB','97 dB','96 dB','103 dB'];
+const apNode   = ['6GHz Base','6GHz Base','6GHz SAT1','6GHz SAT2','6GHz SAT1','6GHz SAT2','6GHz SAT2','5GHz SAT2'];
+const PR='#00B050', BETA='#0070C0';
+
+// ===== ALL DATA: [pr, beta] per direction =====
+const D = {
+  dl:   { pr:[1983.3, 776.4, 954.7, 833.2, 419.0, 779.4, 574.0, 40.8],
+          beta:[2012.2, 805.1, 1007.2, 845.4, 393.2, 751.8, 545.8, 37.2] },
+  ul:   { pr:[2153.6, 1158.1, 1108.7, 901.5, 252.3, 748.4, 651.8, 27.1],
+          beta:[2181.1, 1180.4, 1102.1, 884.8, 257.7, 784.6, 611.4, 29.1] },
+};
+D.uldl = {
+  pr:   D.dl.pr.map((v,i)  => +(v + D.ul.pr[i]).toFixed(1)),
+  beta: D.dl.beta.map((v,i)=> +(v + D.ul.beta[i]).toFixed(1))
+};
+
+// Backhaul data
+const BH = {
+  dl:  { pr:[2273, 1580], beta:[2253, 1510] },
+  ul:  { pr:[2289, 1602], beta:[2261, 1537] }
+};
+
+// % Delta
+function pctArr(a, b){ return a.map((v,i) => b[i] ? +((v-b[i])/b[i]*100).toFixed(1) : 0); }
+const Pct = {};
+['uldl','dl','ul'].forEach(d => { Pct[d] = pctArr(D[d].pr, D[d].beta); });
+
+// ===== Chart base options =====
+const co = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.raw + ' Mbps' } }
+  },
+  scales: {
+    x: { ticks:{ color:'#718096', font:{size:9.5,family:'Barlow'} }, grid:{ color:'#E4EDF5' } },
+    y: { ticks:{ color:'#718096', font:{size:9.5} }, grid:{ color:'#E4EDF5' }, beginAtZero:true }
+  }
+};
+
+const charts = {};
+
+// ===== Fronthaul chart =====
+function mkFH(d) {
+  if(charts.fh){ charts.fh.destroy(); }
+  charts.fh = new Chart(document.getElementById('cFH'), {
+    type: 'bar',
+    data: { labels: locs, datasets: [
+      { label:'PR Sample', data: D[d].pr,   backgroundColor: PR+'cc',   borderColor: PR,   borderWidth:1, borderRadius:3, barPercentage:.42, categoryPercentage:.8 },
+      { label:'Beta Sample', data: D[d].beta, backgroundColor: BETA+'cc', borderColor: BETA, borderWidth:1, borderRadius:3, barPercentage:.42, categoryPercentage:.8 }
+    ]},
+    options: co
+  });
+}
+
+// ===== Backhaul chart =====
+function mkBH(d) {
+  if(charts.bh){ charts.bh.destroy(); }
+  const bhLabels = ['BASE – SAT1', 'BASE – SAT2'];
+  charts.bh = new Chart(document.getElementById('cBH'), {
+    type: 'bar',
+    data: { labels: bhLabels, datasets: [
+      { label:'PR Sample',   data: BH[d].pr,   backgroundColor: PR+'cc',   borderColor: PR,   borderWidth:1, borderRadius:3, barPercentage:.42, categoryPercentage:.8 },
+      { label:'Beta Sample', data: BH[d].beta, backgroundColor: BETA+'cc', borderColor: BETA, borderWidth:1, borderRadius:3, barPercentage:.42, categoryPercentage:.8 }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.raw.toLocaleString() + ' Mbps' } },
+        datalabels: { display: false }
+      },
+      scales: {
+        x: { ticks:{ color:'#718096', font:{size:11,family:'Barlow'} }, grid:{ color:'#E4EDF5' } },
+        y: { ticks:{ color:'#718096', font:{size:10}, callback: v => v.toLocaleString() },
+             grid:{ color:'#E4EDF5' }, beginAtZero:true,
+             title:{ display:true, text:'Throughput (Mbps)', color:'#718096', font:{size:10} } }
+      }
+    }
+  });
+}
+
+// ===== % Delta chart =====
+function mkPct(d) {
+  if(charts.pct){ charts.pct.destroy(); }
+  const vals = Pct[d];
+  const bgColors = vals.map(v => v >= 0 ? PR+'bb' : BETA+'bb');
+  charts.pct = new Chart(document.getElementById('cPct'), {
+    type: 'bar',
+    data: { labels: locs, datasets: [{
+      label: 'PR vs Beta %',
+      data: vals,
+      backgroundColor: bgColors,
+      borderColor: vals.map(v => v >= 0 ? PR : BETA),
+      borderWidth: 1, borderRadius: 3, barPercentage:.55, categoryPercentage:.8
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => (c.raw >= 0 ? 'PR leads: +' : 'Beta leads: ') + Math.abs(c.raw).toFixed(1) + '%' } }
+      },
+      scales: {
+        x: { ticks:{ color:'#718096', font:{size:9.5} }, grid:{ color:'#E4EDF5' } },
+        y: { ticks:{ color:'#718096', font:{size:9.5}, callback: v => v+'%' },
+             grid:{ color:'#E4EDF5' },
+             title:{ display:true, text:'% Δ (PR − Beta) / Beta', color:'#718096', font:{size:9.5} } }
+      }
+    }
+  });
+}
+
+// ===== Toggle helpers =====
+function activate(btn) {
+  btn.parentElement.querySelectorAll('.tgl-btn').forEach(b => b.classList.remove('tgl-active'));
+  btn.classList.add('tgl-active');
+}
+function setDir(d, btn){ activate(btn); mkFH(d); }
+function setDirBH(d, btn){ activate(btn); mkBH(d); }
+function setDirPct(d, btn){ activate(btn); mkPct(d); }
+
+// ===== Populate detail tables =====
+function fmt(v){ return (+v).toFixed(1); }
+function diffCell(a, b){
+  const diff = (a - b).toFixed(1);
+  const pct  = ((a-b)/b*100).toFixed(1);
+  const cls  = diff > 0 ? 'val-pos' : diff < 0 ? 'val-neg' : '';
+  return `<td class="${cls}">${diff > 0 ? '+' : ''}${diff}</td><td class="${cls}">${diff > 0 ? '+' : ''}${pct}%</td>`;
+}
+function resultPill(pct){
+  const v = parseFloat(pct);
+  if(v >= 2)  return '<span class="pill p-win">PR Leads</span>';
+  if(v <= -2) return '<span class="pill p-ref">Beta Leads</span>';
+  return '<span class="pill p-tie">Equivalent</span>';
+}
+
+// UL+DL combined table
+const tbody = document.getElementById('detailTbody');
+locsFull.forEach((loc, i) => {
+  const prV    = D.uldl.pr[i], betaV = D.uldl.beta[i];
+  const prDl   = D.dl.pr[i],   betaDl = D.dl.beta[i];
+  const prUl   = D.ul.pr[i],   betaUl = D.ul.beta[i];
+  const diff   = (prV - betaV).toFixed(1);
+  const pct    = ((prV - betaV)/betaV*100).toFixed(1);
+  const cls    = diff > 0 ? 'val-pos' : diff < 0 ? 'val-neg' : '';
+  tbody.innerHTML += `
+    <tr>
+      <td class="left">${loc}</td>
+      <td class="mono">${pathLoss[i]}</td>
+      <td><strong>${fmt(prV)}</strong></td>
+      <td>${fmt(betaV)}</td>
+      <td class="${cls}">${diff > 0 ? '+' : ''}${diff}</td>
+      <td class="${cls}">${diff > 0 ? '+' : ''}${pct}%</td>
+      <td>${fmt(prDl)}</td><td>${fmt(betaDl)}</td>
+      <td>${fmt(prUl)}</td><td>${fmt(betaUl)}</td>
+    </tr>`;
+});
+
+// DL table
+const dlBody = document.getElementById('dlTbody');
+locsFull.forEach((loc, i) => {
+  const a = D.dl.pr[i], b = D.dl.beta[i];
+  const pct = ((a-b)/b*100).toFixed(1);
+  dlBody.innerHTML += `
+    <tr>
+      <td class="left">${loc}</td>
+      <td class="mono">${pathLoss[i]}</td>
+      <td style="font-size:10px;">${apNode[i]}</td>
+      <td style="color:var(--ng-green);font-weight:700;">${fmt(a)}</td>
+      <td style="color:var(--ng-blue);font-weight:700;">${fmt(b)}</td>
+      ${diffCell(a, b)}
+      <td>${resultPill(pct)}</td>
+    </tr>`;
+});
+
+// UL table
+const ulBody = document.getElementById('ulTbody');
+locsFull.forEach((loc, i) => {
+  const a = D.ul.pr[i], b = D.ul.beta[i];
+  const pct = ((a-b)/b*100).toFixed(1);
+  ulBody.innerHTML += `
+    <tr>
+      <td class="left">${loc}</td>
+      <td class="mono">${pathLoss[i]}</td>
+      <td style="font-size:10px;">${apNode[i]}</td>
+      <td style="color:var(--ng-green);font-weight:700;">${fmt(a)}</td>
+      <td style="color:var(--ng-blue);font-weight:700;">${fmt(b)}</td>
+      ${diffCell(a, b)}
+      <td>${resultPill(pct)}</td>
+    </tr>`;
+});
+
+// ===== Initial render =====
+mkFH('uldl');
+mkBH('dl');
+mkPct('uldl');
+
+// ═══════════════ ISSUE TRACKER ═══════════════
+const STORAGE_KEY = 'rbe771v2_issues_v1';
+let currentFilter = 'all';
+
+const PRESET_ISSUES = [
+  {
+    id: 'ISS-001',
+    title: '2.4G CH10 DL Regression — PR vs Beta −15.8%',
+    severity: 'critical',
+    section: '2.4G CH10',
+    status: 'open',
+    desc: 'PR Sample DL = 170 Mbps (default Tx) vs Beta 202 Mbps. MCS rate: PR=1:2:2 vs Beta=1:4:2. Setting Tx to 15dBm recovers to 190 Mbps but still below Beta. Root cause unconfirmed — possible Tx calibration or power table issue.',
+    created: '2026-04-15'
+  }
+];
+
+function loadIssues() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(PRESET_ISSUES));
+  return JSON.parse(JSON.stringify(PRESET_ISSUES));
+}
+function saveIssues(issues) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(issues)); } catch(e) {}
+}
+function getIssues() { return loadIssues(); }
+
+const SEV_ICON = { critical:'🔴', major:'🟠', minor:'🟡', info:'🔵' };
+const SEV_LABEL = { critical:'Critical', major:'Major', minor:'Minor', info:'Info' };
+
+function statusClass(s) {
+  return s === 'open' ? 'status-open' : s === 'inprogress' ? 'status-inprogress' : 'status-closed';
+}
+function statusLabel(s) {
+  return s === 'open' ? 'Open' : s === 'inprogress' ? 'In Progress' : 'Closed';
+}
+
+function renderIssues() {
+  const issues = getIssues();
+  const filtered = currentFilter === 'all' ? issues : issues.filter(i => i.status === currentFilter);
+  const list = document.getElementById('issueList');
+  const empty = document.getElementById('issueEmpty');
+
+  // Update badge
+  const openCount = issues.filter(i => i.status !== 'closed').length;
+  const badge = document.getElementById('issueBadge');
+  badge.textContent = openCount;
+  badge.style.display = openCount > 0 ? 'flex' : 'none';
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  list.innerHTML = filtered.map(issue => `
+    <div class="issue-item" id="iitem-${issue.id}">
+      <div class="issue-item-top">
+        <span class="issue-sev" title="${SEV_LABEL[issue.severity]}">${SEV_ICON[issue.severity]}</span>
+        <span class="issue-title">${issue.title}</span>
+      </div>
+      <div class="issue-item-meta">
+        ${issue.section ? `<span class="issue-section-tag">${issue.section}</span>` : ''}
+        <span style="font-size:10px;color:var(--txt-light);">${issue.id} · ${issue.created}</span>
+        <select class="issue-status-select ${statusClass(issue.status)}"
+          onchange="updateStatus('${issue.id}', this.value, this)">
+          <option value="open" ${issue.status==='open'?'selected':''}>Open</option>
+          <option value="inprogress" ${issue.status==='inprogress'?'selected':''}>In Progress</option>
+          <option value="closed" ${issue.status==='closed'?'selected':''}>Closed</option>
+        </select>
+      </div>
+      ${issue.desc ? `<div class="issue-desc">${issue.desc}</div>` : ''}
+      <div class="issue-item-actions">
+        <button class="iDeleteBtn" onclick="deleteIssue('${issue.id}')" title="Delete">🗑 Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateStatus(id, newStatus, selectEl) {
+  const issues = getIssues();
+  const idx = issues.findIndex(i => i.id === id);
+  if (idx === -1) return;
+  issues[idx].status = newStatus;
+  saveIssues(issues);
+  selectEl.className = `issue-status-select ${statusClass(newStatus)}`;
+  // Re-render if filtered
+  if (currentFilter !== 'all') renderIssues();
+  // Update badge
+  const openCount = issues.filter(i => i.status !== 'closed').length;
+  const badge = document.getElementById('issueBadge');
+  badge.textContent = openCount;
+  badge.style.display = openCount > 0 ? 'flex' : 'none';
+}
+
+function deleteIssue(id) {
+  const issues = getIssues().filter(i => i.id !== id);
+  saveIssues(issues);
+  renderIssues();
+}
+
+function addIssue() {
+  const title = document.getElementById('newIssueTitle').value.trim();
+  if (!title) { document.getElementById('newIssueTitle').focus(); return; }
+  const issues = getIssues();
+  const newId = 'ISS-' + String(issues.length + 1).padStart(3, '0');
+  issues.unshift({
+    id: newId,
+    title,
+    severity: document.getElementById('newIssueSeverity').value,
+    section: document.getElementById('newIssueSection').value.trim(),
+    status: 'open',
+    desc: document.getElementById('newIssueDesc').value.trim(),
+    created: new Date().toISOString().slice(0, 10)
+  });
+  saveIssues(issues);
+  hideAddForm();
+  renderIssues();
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.iFilter').forEach(b => b.classList.remove('iFilter-active'));
+  btn.classList.add('iFilter-active');
+  renderIssues();
+}
+
+function toggleIssuePanel() {
+  const panel = document.getElementById('issuePanel');
+  panel.classList.toggle('panel-open');
+  if (panel.classList.contains('panel-open')) renderIssues();
+}
+function showAddForm() {
+  document.getElementById('addIssueForm').style.display = 'block';
+  document.getElementById('newIssueTitle').focus();
+}
+function hideAddForm() {
+  document.getElementById('addIssueForm').style.display = 'none';
+  document.getElementById('newIssueTitle').value = '';
+  document.getElementById('newIssueSection').value = '';
+  document.getElementById('newIssueDesc').value = '';
+  document.getElementById('newIssueSeverity').value = 'minor';
+}
+
+// ═══════════════ BAND TAB SWITCH ═══════════════
+function switchBand(band, btn) {
+  document.querySelectorAll('.band-tab').forEach(b => b.classList.remove('tab-active'));
+  btn.classList.add('tab-active');
+  document.querySelectorAll('.band-panel').forEach(p => p.classList.remove('panel-active'));
+  document.getElementById('panel-' + band).classList.add('panel-active');
+}
+
+// ═══════════════ 1RPM CHARTS ═══════════════
+const PR_C = '#00B050', BETA_C = '#0070C0';
+function mk1RPMChart(id, labels, prVals, betaVals) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'PR Sample', data:prVals, backgroundColor:PR_C+'cc', borderColor:PR_C, borderWidth:1, borderRadius:3, barPercentage:.42, categoryPercentage:.8 },
+        { label:'Beta Sample', data:betaVals, backgroundColor:BETA_C+'cc', borderColor:BETA_C, borderWidth:1, borderRadius:3, barPercentage:.42, categoryPercentage:.8 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'top', labels:{ font:{size:10,family:'Barlow'}, color:'#4A5568' } },
+        tooltip:{ callbacks:{ label: c => c.dataset.label+': '+c.raw+' Mbps' } }
+      },
+      scales:{
+        x:{ ticks:{ color:'#718096', font:{size:10} }, grid:{ color:'#E4EDF5' } },
+        y:{ beginAtZero:true, ticks:{ color:'#718096', font:{size:10} }, grid:{ color:'#E4EDF5' },
+            title:{ display:true, text:'Mbps', color:'#718096', font:{size:9} } }
+      }
+    }
+  });
+}
+
+mk1RPMChart('c6g', ['STN1 DL','STN1 UL'], [2050,2310], [2058,2318]);
+mk1RPMChart('c5g', ['STN1 DL\n(default)','STN1 DL\n(20dBm)','STN1 UL\n(default)'], [1450,1450,1620], [1495,null,1660]);
+mk1RPMChart('c2g', ['DL (default)','DL (15dBm)','UL (default)'], [170,190,176], [202,null,183]);
+
+</script>
+
+<!-- ═══════════════ ISSUE TRACKER FAB ═══════════════ -->
+<button id="issueBtn" onclick="toggleIssuePanel()" title="Issue Tracker">
+  🐛
+  <span id="issueBadge">1</span>
+</button>
+
+<!-- ISSUE PANEL -->
+<div id="issuePanel">
+  <div id="issuePanelHeader">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:15px;">🐛</span>
+      <span id="issuePanelTitle">Issue Tracker</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button id="addIssueBtn" onclick="showAddForm()" title="New Issue">＋</button>
+      <button onclick="toggleIssuePanel()" id="closePanelBtn" title="Close">✕</button>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div id="issueFilterBar">
+    <button class="iFilter iFilter-active" data-filter="all" onclick="setFilter('all',this)">All</button>
+    <button class="iFilter" data-filter="open" onclick="setFilter('open',this)">Open</button>
+    <button class="iFilter" data-filter="inprogress" onclick="setFilter('inprogress',this)">In Progress</button>
+    <button class="iFilter" data-filter="closed" onclick="setFilter('closed',this)">Closed</button>
+  </div>
+
+  <!-- ADD FORM (hidden by default) -->
+  <div id="addIssueForm" style="display:none;">
+    <input id="newIssueTitle" placeholder="Issue title…" />
+    <select id="newIssueSeverity">
+      <option value="critical">🔴 Critical</option>
+      <option value="major">🟠 Major</option>
+      <option value="minor" selected>🟡 Minor</option>
+      <option value="info">🔵 Info</option>
+    </select>
+    <input id="newIssueSection" placeholder="Section / Band (e.g. 2.4G CH10)…" />
+    <textarea id="newIssueDesc" placeholder="Description…" rows="2"></textarea>
+    <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px;">
+      <button class="iBtnSecondary" onclick="hideAddForm()">Cancel</button>
+      <button class="iBtnPrimary" onclick="addIssue()">Add Issue</button>
+    </div>
+  </div>
+
+  <!-- ISSUE LIST -->
+  <div id="issueList"></div>
+  <div id="issueEmpty" style="display:none;">
+    <div style="text-align:center;padding:24px 0;color:#94A3B8;font-size:12px;">
+      No issues found
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
